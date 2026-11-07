@@ -16,6 +16,12 @@ class StableDeviceKeyTests(unittest.TestCase):
     def test_whitespace_is_ignored(self) -> None:
         self.assertEqual(stable_device_key(" device-123 "), stable_device_key("device-123"))
 
+    def test_mac_address_formatting_is_normalized(self) -> None:
+        self.assertEqual(
+            stable_device_key("AA:BB:CC:DD:EE:FF"),
+            stable_device_key("aabbccddeeff"),
+        )
+
     def test_empty_identifier_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             stable_device_key("  ")

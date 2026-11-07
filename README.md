@@ -1,55 +1,76 @@
 # Atomberg Independent
 
-An independent Home Assistant integration project for locally controlling
-Atomberg smart fans.
+An independently implemented Home Assistant integration for local control of
+Atomberg smart fans. It does not use cloud accounts or copy another
+integration's source code.
 
-> **Early development:** this release does not discover or control fans yet.
-> The Aris Contour has not been independently identified from its local series
-> code or protocol messages. No fan or light entities are exposed and no
-> network traffic is sent. Do not install it expecting working device controls.
+## Current release: 0.3.0
 
-The implementation is being developed independently. It does not copy or adapt
-source code from other integrations. Protocol behavior must be established
-through controlled observations and documented evidence before it is added.
+The integration currently supports provisioned fans that announce JSON state
+datagrams on the local network:
 
-## Current status
+- Wi-Fi UDP state listening on port `5625` and commands to the discovered
+  device on port `5600`.
+- Home Assistant fan entity with power and six discrete speed levels.
+- Light on/off, and brightness for series that advertise that capability.
+- Sleep-mode switch and off-timer select.
+- Connection and reported-series diagnostic sensors.
+- Stable device identity across restarts without exposing the raw identifier
+  in entity IDs or diagnostics.
+- Model-family hints based on reported series codes. A series code is not
+  treated as proof of the retail model.
 
-- Home Assistant integration setup and a single-instance config flow.
-- An empty-by-default registry for explicitly verified model capabilities.
-- Opaque stable-identifier hashing for future device identity without retaining
-  or logging the original identifier.
-- Diagnostics that report readiness without exposing device or network data.
-- Integration and config-entry version metadata for Home Assistant upgrades.
-- Unit tests for the model registry and identifier handling.
-- No discovery, transport, protocol commands, fan controls, or lighting
-  controls.
+Bluetooth transport, Bluetooth-only setup, lighting colour-mode commands,
+unknown packet encodings, and exact Aris Contour identification are not yet
+implemented. The integration does not currently receive command acknowledgments;
+reported state is updated from subsequent fan broadcasts, not optimistically
+from a successful UDP send.
+
+## Aris Contour model identification
+
+The public reference documents `I1`–`I5` as the Aris/Aris Starlight family and
+`M1` as an Efficio family hint. This integration does not convert an `M1` series
+code into a confirmed Efficio retail model: Home Assistant identifies the device
+by its reported series, and provides a separate series diagnostic sensor.
+Retail model recognition for the Aris Contour requires its actual advertised
+series and independent evidence.
 
 ## Installation
 
-This project is not ready for normal use. For development, copy
-`custom_components/atomberg_independent` into your Home Assistant
-`config/custom_components/` directory, restart Home Assistant, then add
-**Atomberg Independent** from **Settings → Devices & services**. The integration
-will create a config entry but no device entities.
+This is an early-development custom integration for Home Assistant 2024.8 or
+newer. To test it:
+
+1. Copy `custom_components/atomberg_independent` into your Home Assistant
+   `config/custom_components/` directory.
+2. Restart Home Assistant.
+3. Go to **Settings → Devices & services → Add integration** and choose
+   **Atomberg Independent**.
+4. Ensure Home Assistant and the provisioned fan are on a network that permits
+   local UDP broadcast and traffic to the fan's UDP port `5600`.
+5. If an already-running fan does not appear, change its state once with the
+   physical remote and allow its local state broadcast to reach Home Assistant.
+
+The integration listens for fan datagrams; it does not scan arbitrary network
+addresses or send commands before a device has been heard from. A Bluetooth
+adapter is not used by this release.
 
 ## Development
 
-Run the hardware-independent tests with Python 3:
+Run the hardware-independent tests with Python:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-Release and Home Assistant configuration migration guidance is in
-[docs/versioning.md](docs/versioning.md). Protocol research and privacy guidance
-is in [docs/protocol-notes.md](docs/protocol-notes.md).
-The empty [docs/hardware-matrix.md](docs/hardware-matrix.md) is intended to
-record only hardware that has actually been examined.
+Protocol notes, model evidence, troubleshooting, and Home Assistant release
+versioning are documented in [docs/](docs/).
 
 ## Safety and privacy
 
-- No credentials, account access, or cloud service is used.
-- No network discovery or control is performed by this foundation.
-- Do not commit raw packet captures, full hardware identifiers, Wi-Fi details,
-  tokens, or other household network information.
-- Do not expose a capability until it has evidence for the specific model.
+- Device control is sent only to a fan that announced itself to Home Assistant.
+- No internet or cloud calls are made.
+- Device identifiers and local addresses are omitted from integration logs and
+  diagnostics.
+- The integration has not been hardware-validated against the Aris Contour.
+- Do not publish raw packet captures, complete hardware identifiers, network
+  addresses, credentials, or tokens.

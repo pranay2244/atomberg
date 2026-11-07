@@ -1,28 +1,52 @@
-# Protocol investigation notes
+# Protocol notes
 
-There are no verified protocol observations for this implementation yet.
-Protocol code must not be added based only on a product name, an unverified
-model mapping, or behavior inferred from another implementation.
+## Implemented behavior
 
-## Observation record
+The independently written Wi-Fi transport follows the public behavioral
+description of local fan UDP control:
 
-For each controlled observation, record:
+- Device state is received as JSON datagrams on UDP `5625`.
+- Commands are JSON datagrams sent to the announcing device on UDP `5600`.
+- A stable `device_id` is required to create a device.
+- Reported series, state, and optional capability fields are accepted only
+  after type/range validation.
+- Supported command fields are `power`, `speed`, `boost`, `led`, `brightness`,
+  `sleep`, and `timer`.
 
-- Date and test setup (without private network details).
-- Actual model and hardware revision, when confirmed from the device label.
-- Firmware version, if available.
-- Transport and network conditions.
-- One action performed and the before/after observations.
-- Whether the result was repeated.
-- Interpretation and confidence: confirmed, probable, or unknown.
-- A reference to a redacted fixture or test, if one is safe to publish.
+The series/model table and command field names are informed by the public
+integration README and public hardware observations. No source code from the
+referenced integration is used. The current parser supports the JSON shape
+`{"device_id":"…","power":true,"speed":3}` and common nested `device`,
+`data`, `state`, or `payload` objects. Other packet encodings are ignored.
 
-Keep raw packet captures private until reviewed for credentials, stable device
-identifiers, network addresses, and unrelated household traffic. Do not send
-speculative commands to a fan in normal use.
+Behavioral references:
 
-## Implementation gate
+- [Atomberg Local README: transport and supported-series overview](https://github.com/allusv/atomberg-local#how-it-works)
+- [Public R1 BLE field report](https://github.com/allusv/atomberg-local/issues/2)
+- [Public hardware report: series-family table and limitations](https://github.com/allusv/atomberg-local#supported-models)
 
-Only add message formats, identifiers, command values, or model capabilities
-after a reproducible observation supports them. Add parser and encoder tests
-from redacted observations before enabling a transport or exposing entities.
+The public report of a CSV/status-bit BLE characteristic is not used here:
+that report applies to BLE, whose service/characteristic identifiers and
+reconnection behavior have not been independently established for this
+implementation.
+
+## Safety limits and limitations
+
+- The listener binds the documented local state port and does not probe a
+  subnet or send a discovery request.
+- Commands are sent only to the source address of a valid state datagram.
+- Invalid values and unsupported command fields are rejected before sending.
+- UDP send success is not treated as device acknowledgment. State changes are
+  reflected only after a later valid state datagram.
+- Bluetooth and colour-temperature command encoding remain unimplemented.
+- No packet format or model mapping is hardware-verified by this project yet.
+
+## Evidence record
+
+The implementation has not been tested with a physical fan. The documented
+series mappings and control surface are provisional and must be validated on
+each supported model before making hardware compatibility claims.
+
+For new observations, record the confirmed device-label model, the exact
+advertised series, firmware if available, one controlled action, the sanitized
+before/after state, and repeatability. Do not publish unredacted captures.

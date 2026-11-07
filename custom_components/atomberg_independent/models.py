@@ -1,17 +1,13 @@
-"""Verified model capability registry.
+"""Series-based Atomberg model hints and conservative capability profiles."""
 
-The registry intentionally starts empty. Add a profile only after its model
-identity and each listed capability have independent, repeatable evidence.
-"""
+from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from types import MappingProxyType
-from typing import Iterable, Mapping, Optional
 
 
 class Capability(str, Enum):
-    """Controls that a verified model may expose."""
+    """Controls reported for a fan series."""
 
     FAN_POWER = "fan_power"
     FAN_SPEED = "fan_speed"
@@ -24,50 +20,64 @@ class Capability(str, Enum):
 
 @dataclass(frozen=True)
 class ModelProfile:
-    """Evidence-backed capabilities for one model identifier."""
+    """A best-effort series-family hint, not a verified retail model identity."""
 
     identifier: str
     name: str
-    capabilities: frozenset[Capability] = field(default_factory=frozenset)
-    evidence: tuple[str, ...] = ()
+    capabilities: frozenset[Capability]
+    evidence_status: str = "unverified"
 
-    def __post_init__(self) -> None:
-        if not self.identifier.strip():
-            raise ValueError("A model profile requires a non-empty identifier")
-        if not self.name.strip():
-            raise ValueError("A model profile requires a non-empty display name")
-        if not self.evidence:
-            raise ValueError("A model profile requires an evidence reference")
 
+BASE_CAPABILITIES = frozenset(
+    {
+        Capability.FAN_POWER,
+        Capability.FAN_SPEED,
+        Capability.SLEEP_MODE,
+        Capability.OFF_TIMER,
+        Capability.LIGHT_POWER,
+    }
+)
+DIMMABLE = BASE_CAPABILITIES | {Capability.LIGHT_BRIGHTNESS}
+ARIS = DIMMABLE | {Capability.LIGHT_COLOR_MODE}
+
+# Series names are approximate family hints from public documentation.
+# Retail model names are deliberately not inferred from a series code.
+MODEL_PROFILES: dict[str, ModelProfile] = {
+    "R1": ModelProfile("R1", "Renesa family (series hint)", BASE_CAPABILITIES),
+    "R2": ModelProfile("R2", "Renesa+ family (series hint)", BASE_CAPABILITIES),
+    "R3": ModelProfile("R3", "Renesa Smart+ family (series hint)", BASE_CAPABILITIES),
+    "S1": ModelProfile("S1", "Studio+ family (series hint)", frozenset(DIMMABLE)),
+    "S2": ModelProfile(
+        "S2",
+        "Renesa Elite family (series hint)",
+        frozenset(DIMMABLE),
+        evidence_status="hardware-tested-by-reference-project",
+    ),
+    "M1": ModelProfile("M1", "Efficio family (series hint)", frozenset(DIMMABLE)),
+    "M2": ModelProfile("M2", "Efficio+ family (series hint)", BASE_CAPABILITIES),
+    "K1": ModelProfile(
+        "K1",
+        "Gorilla family (series hint)",
+        BASE_CAPABILITIES
+        - {Capability.LIGHT_POWER, Capability.LIGHT_BRIGHTNESS},
+    ),
+}
+
+for _series_number in range(1, 6):
+    _series = f"I{_series_number}"
+    MODEL_PROFILES[_series] = ModelProfile(
+        _series, "Aris family (series hint)", frozenset(ARIS)
+    )
 
 UNKNOWN_MODEL = ModelProfile(
-    identifier="unknown",
-    name="Unknown Atomberg model",
-    evidence=("No model profiles have been independently verified.",),
+    "unknown",
+    "Unknown Atomberg series",
+    BASE_CAPABILITIES,
 )
 
-# Do not add a profile until evidence has been gathered for that specific model.
-MODEL_PROFILES: Mapping[str, ModelProfile] = MappingProxyType({})
 
-
-def resolve_model_profile(
-    identifier: Optional[str],
-    profiles: Mapping[str, ModelProfile] = MODEL_PROFILES,
-) -> ModelProfile:
-    """Return an exact known profile or the explicit unknown profile."""
+def resolve_model_profile(identifier: str | None) -> ModelProfile:
+    """Resolve a series code without treating its family name as device truth."""
     if identifier is None:
         return UNKNOWN_MODEL
-    return profiles.get(identifier.strip().casefold(), UNKNOWN_MODEL)
-
-
-def build_model_registry(
-    profiles: Iterable[ModelProfile],
-) -> Mapping[str, ModelProfile]:
-    """Build a normalized registry and reject ambiguous duplicate identifiers."""
-    registry: dict[str, ModelProfile] = {}
-    for profile in profiles:
-        key = profile.identifier.strip().casefold()
-        if key in registry:
-            raise ValueError("Duplicate model identifier: " + profile.identifier)
-        registry[key] = profile
-    return registry
+    return MODEL_PROFILES.get(identifier.strip().upper(), UNKNOWN_MODEL)

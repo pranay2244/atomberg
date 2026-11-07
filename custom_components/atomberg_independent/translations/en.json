@@ -3,11 +3,21 @@
     "step": {
       "user": {
         "title": "Atomberg Independent",
-        "description": "This research foundation does not discover or control fans yet. Continue to create its Home Assistant entry; no device entities will be added."
+        "description": "Add the integration to listen for local Atomberg fan state broadcasts. Devices are added when they announce themselves."
       }
     },
     "abort": {
-      "single_instance_allowed": "Only one Atomberg Independent entry is supported."
+      "already_configured": "Atomberg Independent is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "connection": {
+        "name": "Connection"
+      },
+      "reported_series": {
+        "name": "Reported series"
+      }
     }
   }
 }
