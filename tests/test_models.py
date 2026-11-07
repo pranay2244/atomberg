@@ -36,6 +36,8 @@ class ModelRegistryTests(unittest.TestCase):
         self.assertIn("Efficio", profile.name)
         self.assertIn("hint", profile.name)
         self.assertEqual(profile.evidence_status, "unverified")
+        self.assertIn(Capability.LIGHT_DISCRETE_INTENSITY, profile.capabilities)
+        self.assertNotIn(Capability.LIGHT_BRIGHTNESS, profile.capabilities)
 
     def test_reference_hardware_test_is_not_attributed_to_this_project(self) -> None:
         self.assertEqual(

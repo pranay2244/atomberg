@@ -4,7 +4,10 @@ An independently implemented Home Assistant integration for local control of
 Atomberg smart fans. It does not use cloud accounts or copy another
 integration's source code.
 
-## Current release: 0.4.7 (pre-release)
+## Unreleased version: 0.4.8
+
+This version is under development and has not been published as a stable
+release.
 
 The integration listens for the documented local UDP packet formats:
 
@@ -16,6 +19,9 @@ The integration listens for the documented local UDP packet formats:
   recognized series.
 - Light on/off, brightness and light-mode commands where the series profile
   supports them. Attribute commands are sent separately from LED power.
+- For M1-reported fans, an optional three-position companion slider (Off, Low,
+  High) is available after configuring distinct, observed protocol brightness
+  values in the integration options. No Low/High values are assumed by default.
 - Sleep-mode switch and off-timer select.
 - Connection and reported-series diagnostic sensors.
 - Stable device identity across restarts without exposing the raw identifier
@@ -38,6 +44,14 @@ The integration does not receive command acknowledgments; reported state is
 updated from subsequent fan broadcasts, not optimistically from a successful
 UDP send.
 
+The Aris Contour Moonbeam specification describes two light intensities. The
+integration is designed to represent these as a separate Off/Low/High number
+slider, not as a continuous light brightness control. Configure the fan-reported
+brightness values for Low and High from observed state packets in the
+integration's options. Until both values are configured, only the light on/off
+entity is available for M1-reported fans. The slider is a companion entity,
+not a control inside the light card.
+
 ## Aris Contour model identification
 
 The public reference lists `I5` in the Aris Contour family and `M1` in an
@@ -45,7 +59,7 @@ Efficio family. This integration uses `I5` as an Aris Contour family hint and
 `M1` as an Efficio family hint only. The series sensor preserves the reported
 code; series alone does not establish a fan's retail model.
 
-## Installation
+## Installation through HACS
 
 The HACS default-store submission is pending review. Until it is accepted, add
 the repository as a custom repository in HACS:
@@ -56,10 +70,15 @@ the repository as a custom repository in HACS:
 4. Go to **Settings → Devices & services → Add integration** and choose
    **Atomberg**.
 
-Alternatively, install it manually:
+To enable the M1 three-position light slider after setup, open the integration
+options and enter the observed protocol brightness values for the Low and High
+light states. Leave both values unset until those states have been captured;
+the slider is not created until both values are set.
+
+## Manual installation
 
 This is an early-development custom integration for Home Assistant 2024.8 or
-newer. To test it:
+newer. To install it manually:
 
 1. Copy `custom_components/atomberg_independent` into your Home Assistant
    `config/custom_components/` directory.
@@ -98,7 +117,7 @@ versioning are documented in [docs/](docs/).
   diagnostics. Logs use shortened one-way device hashes and never include raw
   packet payloads or network addresses. See
   [troubleshooting](docs/troubleshooting.md) for lifecycle and protocol logging.
-- The Aris Contour retail-model mapping and the three-stage light behavior
-  have not been verified from physical state transitions.
+-   The Aris Contour retail-model mapping and the Low/High light-stage mapping
+  have not been verified from controlled physical state transitions.
 - Do not publish raw packet captures, complete hardware identifiers, network
   addresses, credentials, or tokens.

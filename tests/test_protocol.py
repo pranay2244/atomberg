@@ -14,6 +14,7 @@ from custom_components.atomberg_independent.protocol import (
     percentage_to_speed,
     speed_to_percentage,
     timer_hours_to_command_index,
+    validate_light_stage_brightness,
 )
 
 
@@ -167,6 +168,13 @@ class CommandEncodingTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             home_assistant_brightness_to_percent(256)
+
+    def test_light_stage_mapping_requires_distinct_configured_wire_values(self) -> None:
+        self.assertIsNone(validate_light_stage_brightness(None, None))
+        self.assertEqual(validate_light_stage_brightness(10, 20), (10, 20))
+        for values in ((10, None), (None, 20), (10, 10), (0, 20), (10, 101), (True, 20)):
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                validate_light_stage_brightness(*values)
 
 
 if __name__ == "__main__":

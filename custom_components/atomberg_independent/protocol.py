@@ -258,6 +258,24 @@ def home_assistant_brightness_to_percent(brightness: int) -> int:
     return max(1, round(brightness * 100 / 255))
 
 
+def validate_light_stage_brightness(
+    low: Any, high: Any
+) -> tuple[int, int] | None:
+    """Validate configured protocol brightness values for the low and high stages."""
+    if low is None and high is None:
+        return None
+    for value in (low, high):
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or not 1 <= value <= 100
+        ):
+            raise ValueError("Both light-stage brightness values must be from 1 to 100")
+    if low == high:
+        raise ValueError("Low and high light-stage brightness values must differ")
+    return low, high
+
+
 def percentage_to_speed(percentage: int) -> int:
     """Map Home Assistant percentage to one of the fan's six discrete levels."""
     if isinstance(percentage, bool) or not isinstance(percentage, int):

@@ -32,11 +32,16 @@ class ConfigEntryTitleTests(unittest.TestCase):
         entry = SimpleNamespace(title="Atomberg Independent", runtime_data=None)
 
         class FakeConfigEntries:
+            reloaded_entry_id = None
+
             def async_update_entry(self, updated_entry, *, title: str) -> None:
                 updated_entry.title = title
 
             async def async_forward_entry_setups(self, *_args) -> None:
                 pass
+
+            async def async_reload(self, entry_id: str) -> None:
+                self.reloaded_entry_id = entry_id
 
         class FakeBus:
             def __init__(self) -> None:
@@ -54,6 +59,11 @@ class ConfigEntryTitleTests(unittest.TestCase):
         )
         entry.unload_callbacks = []
         entry.async_on_unload = entry.unload_callbacks.append
+        entry.entry_id = "atomberg-entry"
+        reload_listeners = []
+        entry.add_update_listener = lambda callback: (
+            reload_listeners.append(callback) or (lambda: None)
+        )
         manager = FakeManager()
 
         with patch(
@@ -68,7 +78,10 @@ class ConfigEntryTitleTests(unittest.TestCase):
         self.assertEqual(entry.title, NAME)
         self.assertIs(entry.runtime_data, manager)
         self.assertEqual(hass.bus.event_type, "homeassistant_stop")
-        self.assertEqual(len(entry.unload_callbacks), 1)
+        self.assertEqual(len(entry.unload_callbacks), 2)
+        self.assertEqual(len(reload_listeners), 1)
+        asyncio.run(reload_listeners[0](hass, entry))
+        self.assertEqual(hass.config_entries.reloaded_entry_id, entry.entry_id)
         self.assertTrue(
             any(
                 "Setting up Atomberg integration" in message

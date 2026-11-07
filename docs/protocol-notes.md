@@ -27,6 +27,10 @@ description of local fan UDP control:
   indices (`0`, `1`, `2`, `3`, `4`); six hours must not be sent as `timer: 6`.
 - Light attribute commands (`brightness` and `light mode`) are sent separately
   from LED power commands.
+- M1-reported devices can expose a separate Off/Low/High slider after the user
+  configures distinct protocol brightness values for Low and High. No mapping
+  is assumed: the number entity is omitted until both values are configured,
+  and its state is derived from later fan broadcasts.
 - Supported command fields include `power`, `speed`, `boost`, `led`,
   `brightness`, `sleep`, `timer`, `light_mode`, and the `read` request.
 
@@ -37,8 +41,10 @@ documented wire format; they are not genuine device captures. Separate
 sanitized presence and full-state captures from five physical fans have now
 been observed; all five reported series `M1` in both packet types. The captures
 support the packet-envelope and series-field handling but do not validate every
-status-bit interpretation or identify the fans' retail models. Other packet
-encodings are ignored.
+status-bit interpretation or identify the fans' retail models. The observed
+brightness values `10` and `20` have not yet been matched to controlled Low
+and High transitions, so they are not defaults. Other packet encodings are
+ignored.
 
 Behavioral references:
 
@@ -63,6 +69,8 @@ implementation.
 - Packet envelopes and series extraction have been observed against physical
   captures; the status-bit interpretations and model mapping remain only
   partially verified.
+- The two intensity protocol values must be explicitly configured from
+  state-labelled observations; the integration does not guess their mapping.
 - Source-address checks and MAC validation reduce accidental input but do not
   authenticate packets; another host on the LAN can spoof this UDP protocol.
 

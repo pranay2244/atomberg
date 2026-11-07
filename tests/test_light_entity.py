@@ -11,7 +11,7 @@ from ha_test_stubs import ensure_homeassistant_modules
 
 ensure_homeassistant_modules()
 
-from homeassistant.components.light import LightEntityFeature
+from homeassistant.components.light import ColorMode, LightEntityFeature
 
 from custom_components.atomberg_independent.light import AtombergLight
 from custom_components.atomberg_independent.entity import (
@@ -56,12 +56,15 @@ class LightEntityTests(unittest.TestCase):
     def test_effect_feature_is_advertised_only_for_supported_series(self) -> None:
         aris_light, _ = make_light("I5")
         basic_light, _ = make_light("M2")
+        moonbeam_light, _ = make_light("M1")
         basic_light.device.light_mode = "cool"
 
         self.assertEqual(aris_light.supported_features, LightEntityFeature.EFFECT)
         self.assertEqual(aris_light.effect_list, ["warm", "cool", "daylight"])
         self.assertIsNone(aris_light.effect)
         self.assertEqual(aris_light.brightness, round(50 * 255 / 100))
+        self.assertIsNone(moonbeam_light.brightness)
+        self.assertEqual(moonbeam_light.supported_color_modes, {ColorMode.ONOFF})
         self.assertEqual(basic_light.supported_features, LightEntityFeature(0))
         self.assertIsNone(basic_light.effect_list)
         self.assertIsNone(basic_light.effect)

@@ -32,6 +32,7 @@ async def async_setup_entry(
     )
     if entry.title != NAME:
         hass.config_entries.async_update_entry(entry, title=NAME)
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     manager = FanManager(hass)
     try:
@@ -69,6 +70,13 @@ async def async_setup_entry(
         ", ".join(PLATFORMS),
     )
     return True
+
+
+async def _async_options_updated(
+    hass: HomeAssistant, entry: ConfigEntry[FanManager]
+) -> None:
+    """Reload platform entities when the configured light mapping changes."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(

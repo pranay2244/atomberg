@@ -15,6 +15,7 @@ class Capability(str, Enum):
     OFF_TIMER = "off_timer"
     LIGHT_POWER = "light_power"
     LIGHT_BRIGHTNESS = "light_brightness"
+    LIGHT_DISCRETE_INTENSITY = "light_discrete_intensity"
     LIGHT_COLOR_MODE = "light_color_mode"
 
 
@@ -53,7 +54,11 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         frozenset(DIMMABLE),
         evidence_status="hardware-tested-by-reference-project",
     ),
-    "M1": ModelProfile("M1", "Efficio family (series hint)", frozenset(DIMMABLE)),
+    "M1": ModelProfile(
+        "M1",
+        "Efficio family (series hint)",
+        frozenset(BASE_CAPABILITIES | {Capability.LIGHT_DISCRETE_INTENSITY}),
+    ),
     "M2": ModelProfile("M2", "Efficio+ family (series hint)", BASE_CAPABILITIES),
     "K1": ModelProfile(
         "K1",

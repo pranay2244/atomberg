@@ -62,6 +62,19 @@ def ensure_homeassistant_modules() -> None:
     class LightEntity(Entity):
         pass
 
+    number = ModuleType("homeassistant.components.number")
+
+    class NumberMode(str, Enum):
+        AUTO = "auto"
+        BOX = "box"
+        SLIDER = "slider"
+
+    class NumberEntity(Entity):
+        pass
+
+    number.NumberEntity = NumberEntity
+    number.NumberMode = NumberMode
+
     light.ColorMode = ColorMode
     light.LightEntity = LightEntity
     light.LightEntityFeature = LightEntityFeature
@@ -85,6 +98,7 @@ def ensure_homeassistant_modules() -> None:
     helpers.entity = entity
     helpers.entity_platform = entity_platform
     components.light = light
+    components.number = number
     homeassistant.config_entries = config_entries
     homeassistant.const = const
     homeassistant.exceptions = exceptions
@@ -100,6 +114,7 @@ def ensure_homeassistant_modules() -> None:
             "homeassistant.helpers.entity_platform": entity_platform,
             "homeassistant.components": components,
             "homeassistant.components.light": light,
+            "homeassistant.components.number": number,
             "homeassistant.config_entries": config_entries,
             "homeassistant.const": const,
             "homeassistant.exceptions": exceptions,

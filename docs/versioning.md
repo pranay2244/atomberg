@@ -22,9 +22,13 @@ The integration has two independent version numbers:
 2. Run `python3 -m unittest discover -s tests -v`.
 3. Run the Home Assistant `hassfest` and HACS integration validation checks,
    then commit the change and push it to `main`.
-4. Create a Git tag named `v<manifest-version>` (for example, `v0.4.7`) and a
-   GitHub release for that tag. HACS can then offer the tagged release.
-5. In Home Assistant, update the custom integration through HACS and restart
+4. Before claiming support for a hardware-dependent feature, validate its
+   protocol mapping against controlled physical-device observations. Keep
+   unverified controls hidden by default and document the limitation.
+5. Create a Git tag named `v<manifest-version>` (for example, `v0.4.8`) and a
+   stable GitHub release for that tag. Do not mark normal releases as
+   pre-releases. HACS can then offer the tagged release.
+6. In Home Assistant, update the custom integration through HACS and restart
    Home Assistant.
 
 Home Assistant device `sw_version` is reserved for a device firmware version

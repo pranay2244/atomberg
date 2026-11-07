@@ -51,6 +51,15 @@ unrecognized-packet messages are emitted per packet, so disable coordinator
 DEBUG when it is not needed. Do not share full logs; retain only relevant
 sanitized messages and redact device hashes before publishing them.
 
+## Discrete light intensity
+
+For M1-reported fans, the Off/Low/High number slider appears only after both
+protocol brightness values are configured in the integration options. Enter
+the values observed after selecting Low and High separately with the remote
+or official app. The integration omits the slider rather than guessing when
+either value is missing, invalid, or identical. The displayed stage follows
+subsequent fan broadcasts.
+
 ## Reporting an observation
 
 Do not attach unredacted packet captures or logs. Include the confirmed model

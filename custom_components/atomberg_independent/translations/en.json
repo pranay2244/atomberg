@@ -10,7 +10,27 @@
       "already_configured": "Atomberg is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Light intensity mapping",
+        "description": "Optional: enter the fan-reported protocol brightness values captured for Low and High. Leave both blank to keep the discrete slider hidden. Do not infer the values from the LED power bit.",
+        "data": {
+          "light_low_brightness": "Protocol brightness for Low intensity",
+          "light_high_brightness": "Protocol brightness for High intensity"
+        }
+      }
+    },
+    "error": {
+      "invalid_light_stage_values": "Enter both distinct protocol brightness values, each from 1 to 100, or leave both blank."
+    }
+  },
   "entity": {
+    "number": {
+      "light_intensity": {
+        "name": "Light intensity"
+      }
+    },
     "sensor": {
       "connection": {
         "name": "Connection"
