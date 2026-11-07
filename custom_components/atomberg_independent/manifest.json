@@ -4,9 +4,9 @@
   "codeowners": ["@pranay2244"],
   "config_flow": true,
   "documentation": "https://github.com/pranay2244/atomberg",
-  "issue_tracker": "https://github.com/pranay2244/atomberg/issues",
   "integration_type": "hub",
   "iot_class": "local_push",
+  "issue_tracker": "https://github.com/pranay2244/atomberg/issues",
   "requirements": [],
   "version": "0.4.0"
 }

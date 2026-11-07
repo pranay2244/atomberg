@@ -12,12 +12,6 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 
-
-async def async_setup(_hass: HomeAssistant, _config: dict) -> bool:
-    """Set up the integration from YAML (not supported)."""
-    return True
-
-
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry[FanManager]
 ) -> bool:
