@@ -38,6 +38,7 @@ class StableDeviceKeyTests(unittest.TestCase):
         self.assertEqual(first_name, device_display_name(first_key, "I5"))
         self.assertNotEqual(first_name, second_name)
         self.assertTrue(first_name.startswith("Atomberg fan I5 - "))
+        self.assertEqual(len(first_name.rsplit(" - ", 1)[1]), 8)
         self.assertNotIn("AA:BB:CC:DD:EE:01", first_name)
 
 

@@ -22,4 +22,4 @@ def stable_device_key(identifier: str) -> str:
 def device_display_name(device_key: str, series: str | None) -> str:
     """Create a stable, MAC-safe name that distinguishes same-series devices."""
     series_label = f" {series}" if series else ""
-    return f"Atomberg fan{series_label} - {device_key[:6].upper()}"
+    return f"Atomberg fan{series_label} - {device_key[:8].upper()}"

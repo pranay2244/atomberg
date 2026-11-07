@@ -11,7 +11,9 @@ description of local fan UDP control:
 - Commands are JSON datagrams sent to the announcing device on UDP `5600`.
 - Device IDs must be valid unicast MAC addresses. Packets from non-private
   source addresses are ignored, and discovery is limited to 32 active devices.
-  Stale entries are marked unavailable and evicted, freeing capacity.
+  Stale entries are marked unavailable and evicted from the in-memory registry,
+  freeing capacity. Their Home Assistant entities remain registered and
+  unavailable until the device is rediscovered and the entities are rebound.
 - A bounded `{"read":1}` request is sent after presence discovery and at most
   once per minute thereafter.
 - The first state word is decoded into power, speed, LED, sleep, brightness,

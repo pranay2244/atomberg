@@ -47,7 +47,9 @@ class AtombergLight(AtombergEntity, LightEntity):
 
     @property
     def effect(self) -> str | None:
-        """Return the reported light mode."""
+        """Return a reported light mode only when the series supports effects."""
+        if Capability.LIGHT_COLOR_MODE not in self.device.profile.capabilities:
+            return None
         return self.device.light_mode
 
     @property
@@ -69,8 +71,8 @@ class AtombergLight(AtombergEntity, LightEntity):
 
     @property
     def brightness(self) -> int | None:
-        """Return brightness in Home Assistant's 0-255 scale."""
-        if self.device.brightness is None:
+        """Return supported brightness in Home Assistant's 0-255 scale."""
+        if not self._supports_brightness or self.device.brightness is None:
             return None
         return round(self.device.brightness * 255 / 100)
 
