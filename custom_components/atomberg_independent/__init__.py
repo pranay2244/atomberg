@@ -55,11 +55,9 @@ async def async_setup_entry(
             )
             await manager.async_stop()
 
-    def _handle_homeassistant_stop(_event: object) -> None:
-        LOGGER.info(
-            "Home Assistant shutdown detected; Atomberg UDP listener "
-            "will be released"
-        )
+    async def _handle_homeassistant_stop(_event: object) -> None:
+        LOGGER.info("Home Assistant shutdown detected; stopping Atomberg")
+        await manager.async_stop()
 
     remove_stop_listener = hass.bus.async_listen_once(
         EVENT_HOMEASSISTANT_STOP,

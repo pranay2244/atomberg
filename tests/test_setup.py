@@ -17,11 +17,14 @@ from custom_components.atomberg_independent.const import NAME
 
 
 class FakeManager:
+    def __init__(self) -> None:
+        self.stop_calls = 0
+
     async def async_start(self) -> None:
         pass
 
     async def async_stop(self) -> None:
-        pass
+        self.stop_calls += 1
 
 
 class ConfigEntryTitleTests(unittest.TestCase):
@@ -78,8 +81,12 @@ class ConfigEntryTitleTests(unittest.TestCase):
         with self.assertLogs(
             "custom_components.atomberg_independent", level="INFO"
         ) as shutdown_logs:
-            hass.bus.callback(None)
-        self.assertIn("Home Assistant shutdown detected", shutdown_logs.output[0])
+            asyncio.run(hass.bus.callback(None))
+        self.assertIn(
+            "Home Assistant shutdown detected; stopping Atomberg",
+            shutdown_logs.output[0],
+        )
+        self.assertEqual(manager.stop_calls, 1)
 
     def test_unload_logs_failure_without_stopping_listener(self) -> None:
         class FakeConfigEntries:

@@ -149,6 +149,7 @@ class FanManagerTests(unittest.TestCase):
         async def start_and_stop() -> None:
             await manager.async_start()
             await manager.async_stop()
+            await manager.async_stop()
 
         with patch(
             "asyncio.BaseEventLoop.create_datagram_endpoint",
@@ -176,6 +177,10 @@ class FanManagerTests(unittest.TestCase):
         )
         self.assertTrue(
             any("UDP listener close requested" in line for line in captured.output)
+        )
+        self.assertEqual(
+            sum("Stopping Atomberg UDP listener" in line for line in captured.output),
+            1,
         )
 
     def test_expired_device_is_removed_and_can_be_rediscovered(self) -> None:

@@ -83,6 +83,7 @@ class FanManager:
         self.devices: dict[str, FanDevice] = {}
         self._listeners: list[Callable[[FanDevice], None]] = []
         self._expiry_unsub: Callable[[], None] | None = None
+        self._stopped = False
 
     async def async_start(self) -> None:
         """Bind the documented local state port and start availability checks."""
@@ -108,6 +109,9 @@ class FanManager:
 
     async def async_stop(self) -> None:
         """Release listener resources."""
+        if self._stopped:
+            return
+        self._stopped = True
         LOGGER.info("Stopping Atomberg UDP listener")
         if self._expiry_unsub:
             self._expiry_unsub()
