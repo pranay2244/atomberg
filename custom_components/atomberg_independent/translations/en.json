@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Atomberg Independent",
+        "description": "This research foundation does not discover or control fans yet. Continue to create its Home Assistant entry; no device entities will be added."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one Atomberg Independent entry is supported."
+    }
+  }
+}

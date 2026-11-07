@@ -1,0 +1,10 @@
+{
+  "domain": "atomberg_independent",
+  "name": "Atomberg Independent",
+  "codeowners": ["@pranay2244"],
+  "config_flow": true,
+  "documentation": "https://github.com/pranay2244/atomberg",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "0.1.0"
+}
