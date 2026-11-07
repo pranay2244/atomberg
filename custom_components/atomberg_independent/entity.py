@@ -59,16 +59,29 @@ def setup_device_entities(
     async_add_entities: AddEntitiesCallback,
     entity_factory: EntityFactory,
 ) -> None:
-    """Add one set of platform entities per discovered fan and refresh updates."""
+    """Add entities for discovered fans and handle registry removal."""
     entities: dict[str, AtombergEntity] = {}
 
+    def remove_cached_entity(
+        device_key: str, removed_entity: AtombergEntity
+    ) -> None:
+        """Forget an entity when Home Assistant removes it."""
+        if entities.get(device_key) is removed_entity:
+            entities.pop(device_key, None)
+
     def device_updated(device: FanDevice) -> None:
+        """Create or update the entity for a discovered fan."""
         entity = entities.get(device.device_key)
         if entity is None:
             entity = entity_factory(manager, device)
             if entity is None:
                 return
             entities[device.device_key] = entity
+            entity.async_on_remove(
+                lambda key=device.device_key, removed=entity: remove_cached_entity(
+                    key, removed
+                )
+            )
             async_add_entities([entity])
             return
         entity.device = device

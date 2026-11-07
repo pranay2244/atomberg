@@ -147,6 +147,43 @@ class LightEntityTests(unittest.TestCase):
         self.assertIs(entity.device, new_device)
         self.assertTrue(entity.available)
 
+    def test_entity_is_recreated_after_registry_removal(self) -> None:
+        manager = FakeManager()
+        added = []
+        device = FanDevice(
+            device_id="020000000001",
+            device_key="a" * 64,
+            host="192.168.1.10",
+            series="I5",
+            profile=resolve_model_profile("I5"),
+            last_seen=1,
+            led=True,
+        )
+
+        setup_device_entities(
+            manager,
+            added.extend,
+            lambda current_manager, current_device: AtombergLight(
+                current_manager, current_device, "light", "Light"
+            ),
+        )
+        listener = manager.listeners[0]
+        listener(device)
+        original_entity = added[0]
+
+        for callback in reversed(original_entity._on_remove):
+            callback()
+        original_entity._on_remove.clear()
+
+        listener(device)
+
+        self.assertEqual(len(added), 2)
+        self.assertIsNot(added[1], original_entity)
+        self.assertEqual(
+            added[1]._attr_unique_id,
+            original_entity._attr_unique_id,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

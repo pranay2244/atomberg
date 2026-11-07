@@ -33,6 +33,14 @@ def ensure_homeassistant_modules() -> None:
     entity = ModuleType("homeassistant.helpers.entity")
 
     class Entity:
+        def __init__(self) -> None:
+            self._on_remove = []
+
+        def async_on_remove(self, callback: Callable[[], None]) -> None:
+            if not hasattr(self, "_on_remove"):
+                self._on_remove = []
+            self._on_remove.append(callback)
+
         def async_write_ha_state(self) -> None:
             pass
 
@@ -51,7 +59,7 @@ def ensure_homeassistant_modules() -> None:
     class LightEntityFeature(IntFlag):
         EFFECT = 1
 
-    class LightEntity:
+    class LightEntity(Entity):
         pass
 
     light.ColorMode = ColorMode
@@ -60,6 +68,8 @@ def ensure_homeassistant_modules() -> None:
 
     config_entries = ModuleType("homeassistant.config_entries")
     config_entries.ConfigEntry = type("ConfigEntry", (), {})
+    const = ModuleType("homeassistant.const")
+    const.EVENT_HOMEASSISTANT_STOP = "homeassistant_stop"
     exceptions = ModuleType("homeassistant.exceptions")
 
     class ConfigEntryNotReady(Exception):
@@ -76,6 +86,7 @@ def ensure_homeassistant_modules() -> None:
     helpers.entity_platform = entity_platform
     components.light = light
     homeassistant.config_entries = config_entries
+    homeassistant.const = const
     homeassistant.exceptions = exceptions
 
     sys.modules.update(
@@ -90,6 +101,7 @@ def ensure_homeassistant_modules() -> None:
             "homeassistant.components": components,
             "homeassistant.components.light": light,
             "homeassistant.config_entries": config_entries,
+            "homeassistant.const": const,
             "homeassistant.exceptions": exceptions,
         }
     )

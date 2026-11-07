@@ -1,7 +1,9 @@
 """Tests for UDP fan discovery and availability lifecycle."""
 
+import asyncio
 import json
 import unittest
+from unittest.mock import Mock, patch
 
 from ha_test_stubs import ensure_homeassistant_modules
 
@@ -17,9 +19,13 @@ from custom_components.atomberg_independent.coordinator import FanManager
 class FakeTransport:
     def __init__(self) -> None:
         self.sent: list[tuple[bytes, tuple[str, int]]] = []
+        self.closed = False
 
     def sendto(self, payload: bytes, address: tuple[str, int]) -> None:
         self.sent.append((payload, address))
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def presence(mac_tail: int, series: str = "I5") -> bytes:
@@ -104,6 +110,73 @@ class FanManagerTests(unittest.TestCase):
 
         self.assertEqual(self.manager.devices, {})
         self.assertEqual(self.manager.transport.sent, [])
+
+    def test_unrecognized_datagram_logs_only_its_size(self) -> None:
+        payload = b"unrecognized packet contents"
+
+        with self.assertLogs(
+            "custom_components.atomberg_independent.coordinator", level="DEBUG"
+        ) as captured:
+            self.manager.handle_datagram(payload, ("192.168.1.10", 5625))
+
+        self.assertIn(f"size={len(payload)} bytes", captured.output[0])
+        self.assertNotIn(payload.decode(), captured.output[0])
+
+    def test_discovery_log_uses_hashed_identity_and_packet_metadata(self) -> None:
+        with self.assertLogs(
+            "custom_components.atomberg_independent.coordinator", level="INFO"
+        ) as captured:
+            self.manager.handle_datagram(
+                presence(1), ("192.168.1.10", 5625)
+            )
+
+        self.assertIn("device_hash=", captured.output[0])
+        self.assertIn("packet_type=presence", captured.output[0])
+        self.assertIn("reported_series=I5", captured.output[0])
+        self.assertNotIn("02:00:00:00:00:01", captured.output[0])
+        self.assertNotIn("192.168.1.10", captured.output[0])
+
+    def test_listener_start_and_stop_are_logged(self) -> None:
+        manager = FanManager(object())
+        transport = FakeTransport()
+        unsubscribe = Mock()
+
+        async def create_datagram_endpoint(_loop, protocol_factory, **_kwargs):
+            protocol = protocol_factory()
+            protocol.connection_made(transport)
+            return transport, protocol
+
+        async def start_and_stop() -> None:
+            await manager.async_start()
+            await manager.async_stop()
+
+        with patch(
+            "asyncio.BaseEventLoop.create_datagram_endpoint",
+            new=create_datagram_endpoint,
+        ):
+            with patch(
+                "custom_components.atomberg_independent.coordinator."
+                "async_track_time_interval",
+                return_value=unsubscribe,
+            ):
+                with self.assertLogs(
+                    "custom_components.atomberg_independent.coordinator",
+                    level="DEBUG",
+                ) as captured:
+                    asyncio.run(start_and_stop())
+
+        self.assertIsNone(manager.transport)
+        self.assertTrue(transport.closed)
+        unsubscribe.assert_called_once_with()
+        self.assertTrue(
+            any("UDP listener is ready (port=5625)" in line for line in captured.output)
+        )
+        self.assertTrue(
+            any("availability monitoring started" in line for line in captured.output)
+        )
+        self.assertTrue(
+            any("UDP listener close requested" in line for line in captured.output)
+        )
 
     def test_expired_device_is_removed_and_can_be_rediscovered(self) -> None:
         self.manager.handle_datagram(presence(1), ("192.168.1.10", 5625))

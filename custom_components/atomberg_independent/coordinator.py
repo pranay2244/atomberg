@@ -93,20 +93,29 @@ class FanManager:
             allow_broadcast=True,
             reuse_port=False,
         )
+        LOGGER.info("Atomberg UDP listener is ready (port=%d)", STATE_PORT)
         self._expiry_unsub = async_track_time_interval(
             self.hass,
             self._expire_stale_devices,
             timedelta(seconds=UPDATE_INTERVAL_SECONDS),
         )
+        LOGGER.debug(
+            "Atomberg availability monitoring started "
+            "(interval=%ds, device_timeout=%ds)",
+            UPDATE_INTERVAL_SECONDS,
+            DEVICE_TIMEOUT_SECONDS,
+        )
 
     async def async_stop(self) -> None:
         """Release listener resources."""
+        LOGGER.info("Stopping Atomberg UDP listener")
         if self._expiry_unsub:
             self._expiry_unsub()
             self._expiry_unsub = None
         if self.transport:
             self.transport.close()
             self.transport = None
+            LOGGER.info("Atomberg UDP listener close requested")
         self._listeners.clear()
 
     def async_add_listener(self, callback: Callable[[FanDevice], None]) -> None:
@@ -122,6 +131,10 @@ class FanManager:
 
         parsed = parse_datagram(payload)
         if parsed is None:
+            LOGGER.debug(
+                "Received an unrecognised Atomberg UDP datagram (size=%d bytes)",
+                len(payload),
+            )
             return
 
         key = stable_device_key(parsed.device_id)
@@ -146,7 +159,10 @@ class FanManager:
             )
             self.devices[key] = device
             LOGGER.info(
-                "Discovered Atomberg fan (series=%s)",
+                "Discovered Atomberg fan "
+                "(device_hash=%s, packet_type=%s, reported_series=%s)",
+                key[:8].upper(),
+                packet_type,
                 parsed.series or "unknown",
             )
         else:
@@ -228,6 +244,12 @@ class FanManager:
             if current_time - device.last_seen <= DEVICE_TIMEOUT_SECONDS:
                 continue
             if device.available:
+                LOGGER.info(
+                    "Atomberg fan timed out; marking unavailable "
+                    "(device_hash=%s, timeout_threshold=%ds)",
+                    key[:8].upper(),
+                    DEVICE_TIMEOUT_SECONDS,
+                )
                 device.available = False
                 for callback in tuple(self._listeners):
                     callback(device)

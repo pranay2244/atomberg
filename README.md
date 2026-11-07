@@ -4,7 +4,7 @@ An independently implemented Home Assistant integration for local control of
 Atomberg smart fans. It does not use cloud accounts or copy another
 integration's source code.
 
-## Current release: 0.4.4
+## Current release: 0.4.5
 
 The integration listens for the documented local UDP packet formats:
 
@@ -22,6 +22,9 @@ The integration listens for the documented local UDP packet formats:
   in entity IDs or diagnostics.
 - Distinct, stable Home Assistant device names for multiple fans in the same
   series.
+- Entities can be recreated after their Home Assistant registry entries are
+  manually removed, while ordinary offline/online transitions keep the same
+  entity objects.
 - Model-family hints based on reported series codes. A series code is not
   treated as proof of the retail model.
 
@@ -79,10 +82,9 @@ versioning are documented in [docs/](docs/).
   another host spoofing packets on an untrusted local network.
 - No internet or cloud calls are made.
 - Device identifiers and local addresses are omitted from integration logs and
-  diagnostics. Temporary protocol debug messages include only a shortened
-  one-way device hash, the reported series, and the status word; they omit raw
-  payloads and network addresses. See [troubleshooting](docs/troubleshooting.md)
-  for enabling and disabling these messages.
+  diagnostics. Logs use shortened one-way device hashes and never include raw
+  packet payloads or network addresses. See
+  [troubleshooting](docs/troubleshooting.md) for lifecycle and protocol logging.
 - The integration has not been hardware-validated against the Aris Contour.
 - Do not publish raw packet captures, complete hardware identifiers, network
   addresses, credentials, or tokens.

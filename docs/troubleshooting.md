@@ -27,27 +27,33 @@ Diagnostics include integration and Home Assistant versions, config-entry
 schema version, reported series, and online status. Raw device identifiers,
 network addresses, credentials, and raw protocol payloads are omitted.
 
-## Temporary protocol debug logging
+## Lifecycle and protocol logging
 
-For short-term troubleshooting, the integration emits one debug message per
-device and packet type (presence and full-state). The message contains a
-shortened one-way device hash, the raw reported series, and the numeric status
-word when present. It does not include a MAC address, source IP, or raw packet
-payload.
+At INFO level, the integration logs setup, listener readiness, setup completion,
+Home Assistant shutdown, config-entry unload, listener stop, newly discovered
+devices, and device timeouts. Device messages use a shortened one-way hash
+rather than a MAC address. At DEBUG level, it logs an unrecognized packet's
+size, outgoing command hashes, and one temporary protocol diagnostic per
+device and packet type (presence and full-state). Protocol diagnostics include
+the reported series and numeric status word when present, but not a source IP
+or raw packet payload.
 
-Temporarily enable the logger in Home Assistant's `configuration.yaml`:
+For lifecycle logs, enable the integration logger in Home Assistant's
+`configuration.yaml`. Add the coordinator logger for protocol diagnostics:
 
 ```yaml
 logger:
   default: warning
   logs:
+    custom_components.atomberg_independent: info
     custom_components.atomberg_independent.coordinator: debug
 ```
 
 Restart Home Assistant, reproduce the observation, then remove the
-integration-specific logger entry and restart again. Do not share full logs;
-retain only the relevant sanitized messages and redact the device hash if
-publishing them.
+integration-specific logger entries and restart again. DEBUG-level unknown
+packet messages are emitted per packet, so disable coordinator DEBUG when it is
+not needed. Do not share full logs; retain only relevant sanitized messages and
+redact device hashes before publishing them.
 
 ## Reporting an observation
 
