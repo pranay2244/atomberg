@@ -3,10 +3,10 @@
 An independent Home Assistant integration project for locally controlling
 Atomberg smart fans.
 
-> **Research foundation only:** this project does not discover or control fans
-> yet. No model, transport, or command is currently verified, so it deliberately
-> exposes no fan or light entities and sends no network traffic. Do not install
-> it expecting working device controls.
+> **Early development:** this release does not discover or control fans yet.
+> The Aris Contour has not been independently identified from its local series
+> code or protocol messages. No fan or light entities are exposed and no
+> network traffic is sent. Do not install it expecting working device controls.
 
 The implementation is being developed independently. It does not copy or adapt
 source code from other integrations. Protocol behavior must be established
@@ -19,6 +19,7 @@ through controlled observations and documented evidence before it is added.
 - Opaque stable-identifier hashing for future device identity without retaining
   or logging the original identifier.
 - Diagnostics that report readiness without exposing device or network data.
+- Integration and config-entry version metadata for Home Assistant upgrades.
 - Unit tests for the model registry and identifier handling.
 - No discovery, transport, protocol commands, fan controls, or lighting
   controls.
@@ -39,7 +40,9 @@ Run the hardware-independent tests with Python 3:
 python3 -m unittest discover -s tests -v
 ```
 
-Protocol research and privacy guidance is in [docs/protocol-notes.md](docs/protocol-notes.md).
+Release and Home Assistant configuration migration guidance is in
+[docs/versioning.md](docs/versioning.md). Protocol research and privacy guidance
+is in [docs/protocol-notes.md](docs/protocol-notes.md).
 The empty [docs/hardware-matrix.md](docs/hardware-matrix.md) is intended to
 record only hardware that has actually been examined.
 
