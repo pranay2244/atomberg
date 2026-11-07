@@ -90,10 +90,6 @@ class AtombergLight(AtombergEntity, LightEntity):
         ):
             raise ValueError("Light modes are not supported by this fan")
         if brightness_percent == 0:
-            if effect is not None:
-                self.manager.send_commands(
-                    self.device, build_light_commands(light_mode=effect)
-                )
             self.manager.send_command(self.device, led=False)
             return
         commands = build_light_commands(

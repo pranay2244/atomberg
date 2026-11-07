@@ -93,6 +93,16 @@ class LightEntityTests(unittest.TestCase):
             [{"brightness": 50}, {"light_mode": "cool"}],
         )
 
+    def test_zero_brightness_turns_off_without_applying_effect(self) -> None:
+        light, manager = make_light("I5")
+
+        asyncio.run(light.async_turn_on(brightness=0, effect="cool"))
+
+        self.assertEqual(
+            [json.loads(payload) for payload in manager.payloads],
+            [{"led": False}],
+        )
+
     def test_existing_entity_rebinds_after_stale_device_eviction(self) -> None:
         manager = FakeManager()
         added = []
