@@ -6,6 +6,7 @@ import unittest
 from custom_components.atomberg_independent.protocol import (
     build_light_commands,
     encode_command,
+    home_assistant_brightness_to_percent,
     is_valid_source_address,
     parse_datagram,
     parse_full_state,
@@ -61,6 +62,11 @@ class DatagramParsingTests(unittest.TestCase):
         self.assertEqual(state.brightness, 70)
         self.assertEqual(state.timer_hours, 6)
         self.assertEqual(state.light_mode, "daylight")
+
+    def test_light_mode_bit_combinations_preserve_unknown_default(self) -> None:
+        self.assertEqual(parse_full_state(full_state_packet(0)).light_mode, None)
+        self.assertEqual(parse_full_state(full_state_packet(0x08)).light_mode, "cool")
+        self.assertEqual(parse_full_state(full_state_packet(0x8000)).light_mode, "warm")
 
     def test_timer_hours_map_to_command_indices(self) -> None:
         self.assertEqual(
@@ -150,6 +156,17 @@ class CommandEncodingTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             percentage_to_speed(0)
+
+    def test_home_assistant_brightness_keeps_positive_requests_nonzero(self) -> None:
+        self.assertEqual(
+            [
+                home_assistant_brightness_to_percent(value)
+                for value in (0, 1, 2, 127, 128, 255)
+            ],
+            [0, 1, 1, 50, 50, 100],
+        )
+        with self.assertRaises(ValueError):
+            home_assistant_brightness_to_percent(256)
 
 
 if __name__ == "__main__":

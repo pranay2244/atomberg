@@ -1,5 +1,7 @@
 """Privacy-preserving device identity helpers."""
 
+from __future__ import annotations
+
 import hashlib
 import re
 
@@ -15,3 +17,9 @@ def stable_device_key(identifier: str) -> str:
     return hashlib.sha256(
         b"atomberg-independent\x00" + normalized.encode("utf-8")
     ).hexdigest()
+
+
+def device_display_name(device_key: str, series: str | None) -> str:
+    """Create a stable, MAC-safe name that distinguishes same-series devices."""
+    series_label = f" {series}" if series else ""
+    return f"Atomberg fan{series_label} - {device_key[:6].upper()}"

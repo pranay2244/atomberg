@@ -10,7 +10,8 @@ description of local fan UDP control:
   comma-separated `state_string`.
 - Commands are JSON datagrams sent to the announcing device on UDP `5600`.
 - Device IDs must be valid unicast MAC addresses. Packets from non-private
-  source addresses are ignored, and discovery is limited to 32 devices.
+  source addresses are ignored, and discovery is limited to 32 active devices.
+  Stale entries are marked unavailable and evicted, freeing capacity.
 - A bounded `{"read":1}` request is sent after presence discovery and at most
   once per minute thereafter.
 - The first state word is decoded into power, speed, LED, sleep, brightness,
@@ -18,6 +19,9 @@ description of local fan UDP control:
 - Provisional status masks: speed bits `0-2`, cool mode bit `3`, power bit `4`,
   LED bit `5`, sleep bit `7`, brightness bits `8-14`, warm mode bit `15`, and
   timer bits `16-19`. Series is read from the eighth CSV field.
+- If neither light-mode bit is set, the mode remains unknown. Whether this
+  represents the fan's default warm mode is unverified and needs a real
+  Aris Contour state capture.
 - The reported timer hours (`0`, `1`, `2`, `3`, `6`) map to wire command
   indices (`0`, `1`, `2`, `3`, `4`); six hours must not be sent as `timer: 6`.
 - Light attribute commands (`brightness` and `light mode`) are sent separately

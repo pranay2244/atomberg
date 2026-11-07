@@ -4,7 +4,7 @@ An independently implemented Home Assistant integration for local control of
 Atomberg smart fans. It does not use cloud accounts or copy another
 integration's source code.
 
-## Current release: 0.4.0
+## Current release: 0.4.1
 
 The integration listens for the documented local UDP packet formats:
 
@@ -20,6 +20,8 @@ The integration listens for the documented local UDP packet formats:
 - Connection and reported-series diagnostic sensors.
 - Stable device identity across restarts without exposing the raw identifier
   in entity IDs or diagnostics.
+- Distinct, stable Home Assistant device names for multiple fans in the same
+  series.
 - Model-family hints based on reported series codes. A series code is not
   treated as proof of the retail model.
 

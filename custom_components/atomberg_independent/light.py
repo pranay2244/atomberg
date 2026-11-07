@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.components.light import ColorMode, LightEntity
+from homeassistant.components.light import (
+    ColorMode,
+    LightEntity,
+    LightEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -10,11 +14,18 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import FanDevice, FanManager
 from .entity import AtombergEntity, setup_device_entities
 from .models import Capability
-from .protocol import build_light_commands
+from .protocol import build_light_commands, home_assistant_brightness_to_percent
 
 
 class AtombergLight(AtombergEntity, LightEntity):
     """Fan under-light with only the reported supported controls."""
+
+    @property
+    def supported_features(self) -> LightEntityFeature:
+        """Advertise effects only for fan series with light-mode support."""
+        if Capability.LIGHT_COLOR_MODE in self.device.profile.capabilities:
+            return LightEntityFeature.EFFECT
+        return LightEntityFeature(0)
 
     @property
     def supported_color_modes(self) -> set[ColorMode]:
@@ -70,16 +81,19 @@ class AtombergLight(AtombergEntity, LightEntity):
         if brightness is not None:
             if not self._supports_brightness:
                 raise ValueError("Brightness is not supported by this fan")
-            if not isinstance(brightness, int) or isinstance(brightness, bool):
-                raise ValueError("Brightness must be an integer")
-            if not 0 <= brightness <= 255:
-                raise ValueError("Brightness must be between 0 and 255")
-            brightness_percent = round(brightness * 100 / 255)
+            brightness_percent = home_assistant_brightness_to_percent(brightness)
         effect = kwargs.get("effect")
         if effect is not None and (
             Capability.LIGHT_COLOR_MODE not in self.device.profile.capabilities
         ):
             raise ValueError("Light modes are not supported by this fan")
+        if brightness_percent == 0:
+            if effect is not None:
+                self.manager.send_commands(
+                    self.device, build_light_commands(light_mode=effect)
+                )
+            self.manager.send_command(self.device, led=False)
+            return
         commands = build_light_commands(
             turn_on=True,
             brightness=brightness_percent,

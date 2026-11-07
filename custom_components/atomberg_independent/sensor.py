@@ -60,6 +60,7 @@ async def async_setup_entry(
             async_add_entities(current)
             return
         for entity in current:
+            entity.device = device
             entity.async_write_ha_state()
 
     manager.async_add_listener(device_updated)

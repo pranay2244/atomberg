@@ -2,7 +2,7 @@
 
 DOMAIN = "atomberg_independent"
 NAME = "Atomberg Independent"
-INTEGRATION_VERSION = "0.4.0"
+INTEGRATION_VERSION = "0.4.1"
 INTEGRATION_STATUS = "local_wifi_unverified"
 
 PLATFORMS = ("fan", "light", "switch", "select", "sensor")

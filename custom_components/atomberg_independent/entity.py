@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Optional
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
@@ -10,6 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import FanDevice, FanManager
+from .identity import device_display_name
 
 
 class AtombergEntity(Entity):
@@ -40,17 +42,16 @@ class AtombergEntity(Entity):
         return DeviceInfo(
             identifiers={(DOMAIN, self.device.device_key)},
             manufacturer="Atomberg",
-            name=(
-                f"Atomberg fan (series {self.device.series})"
-                if self.device.series
-                else "Atomberg fan"
+            name=device_display_name(
+                self.device.device_key,
+                self.device.series,
             ),
             model=model,
             sw_version=self.device.firmware,
         )
 
 
-EntityFactory = Callable[[FanManager, FanDevice], AtombergEntity | None]
+EntityFactory = Callable[[FanManager, FanDevice], Optional[AtombergEntity]]
 
 
 def setup_device_entities(
@@ -70,6 +71,7 @@ def setup_device_entities(
             entities[device.device_key] = entity
             async_add_entities([entity])
             return
+        entity.device = device
         entity.async_write_ha_state()
 
     manager.async_add_listener(device_updated)

@@ -129,8 +129,10 @@ class FanManager:
         is_new = device is None
         if device is None:
             if len(self.devices) >= MAX_DEVICES:
-                LOGGER.warning("Ignoring Atomberg device discovery limit")
-                return
+                self._remove_stale_devices(now)
+                if len(self.devices) >= MAX_DEVICES:
+                    LOGGER.warning("Ignoring Atomberg device discovery limit")
+                    return
             profile = resolve_model_profile(parsed.series)
             device = FanDevice(
                 device_id=parsed.device_id,
@@ -201,14 +203,20 @@ class FanManager:
     def _expire_stale_devices(self, _now: Any) -> None:
         """Mark devices offline after state broadcasts stop."""
         current_time = time.monotonic()
-        for device in self.devices.values():
-            available = current_time - device.last_seen <= DEVICE_TIMEOUT_SECONDS
-            if available != device.available:
-                device.available = available
+        self._remove_stale_devices(current_time)
+        for device in tuple(self.devices.values()):
+            self._request_state_refresh(device, current_time)
+
+    def _remove_stale_devices(self, current_time: float) -> None:
+        """Free slots for devices that have exceeded the availability timeout."""
+        for key, device in tuple(self.devices.items()):
+            if current_time - device.last_seen <= DEVICE_TIMEOUT_SECONDS:
+                continue
+            if device.available:
+                device.available = False
                 for callback in tuple(self._listeners):
                     callback(device)
-            if available:
-                self._request_state_refresh(device, current_time)
+            self.devices.pop(key, None)
 
     def send_command(self, device: FanDevice, **fields: bool | int | str) -> None:
         """Send a validated command to a device heard on the local network."""

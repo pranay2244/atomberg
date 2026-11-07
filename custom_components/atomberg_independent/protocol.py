@@ -247,6 +247,17 @@ def build_light_commands(
     return tuple(commands)
 
 
+def home_assistant_brightness_to_percent(brightness: int) -> int:
+    """Convert Home Assistant brightness to fan percent without dropping nonzero values."""
+    if isinstance(brightness, bool) or not isinstance(brightness, int):
+        raise ValueError("Brightness must be an integer")
+    if not 0 <= brightness <= 255:
+        raise ValueError("Brightness must be between 0 and 255")
+    if brightness == 0:
+        return 0
+    return max(1, round(brightness * 100 / 255))
+
+
 def percentage_to_speed(percentage: int) -> int:
     """Map Home Assistant percentage to one of the fan's six discrete levels."""
     if isinstance(percentage, bool) or not isinstance(percentage, int):

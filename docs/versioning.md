@@ -22,7 +22,7 @@ The integration has two independent version numbers:
 2. Run `python3 -m unittest discover -s tests -v`.
 3. Run the Home Assistant `hassfest` and HACS integration validation checks,
    then commit the change and push it to `main`.
-4. Create a Git tag named `v<manifest-version>` (for example, `v0.4.0`) and a
+4. Create a Git tag named `v<manifest-version>` (for example, `v0.4.1`) and a
    GitHub release for that tag. HACS can then offer the tagged release.
 5. In Home Assistant, update the custom integration through HACS and restart
    Home Assistant.
