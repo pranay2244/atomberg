@@ -26,6 +26,8 @@ class FanState:
     device_id: str
     series: str | None
     has_state: bool
+    raw_series: str | None = None
+    status_word: int | None = None
     power: bool | None = None
     speed: int | None = None
     sleep: bool | None = None
@@ -103,6 +105,8 @@ def _decode_state_string(state_string: Any) -> dict[str, Any] | None:
         "daylight" if cool and warm else "cool" if cool else "warm" if warm else None
     )
     return {
+        "raw_series": series_text,
+        "status_word": status,
         "power": bool(status & 0x10),
         "speed": speed if speed <= 6 else None,
         "led": bool(status & 0x20),
@@ -129,7 +133,12 @@ def parse_presence(payload: bytes) -> FanState | None:
     series = _normalize_series(series_text)
     if device_id is None or series is None:
         return None
-    return FanState(device_id=device_id, series=series, has_state=False)
+    return FanState(
+        device_id=device_id,
+        series=series,
+        has_state=False,
+        raw_series=series_text,
+    )
 
 
 def parse_full_state(payload: bytes) -> FanState | None:
@@ -155,6 +164,8 @@ def parse_full_state(payload: bytes) -> FanState | None:
         device_id=device_id,
         series=state["series"],
         has_state=True,
+        raw_series=state["raw_series"],
+        status_word=state["status_word"],
         power=state["power"],
         speed=state["speed"],
         sleep=state["sleep"],

@@ -1,4 +1,4 @@
-"""Config flow for Atomberg Independent."""
+"""Config flow for Atomberg."""
 
 from __future__ import annotations
 

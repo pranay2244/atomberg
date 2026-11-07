@@ -1,9 +1,10 @@
-"""Set up the Atomberg Independent integration foundation."""
+"""Set up the Atomberg integration."""
 
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
+from .const import NAME
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from .coordinator import FanManager
 
 LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry[FanManager]
@@ -20,6 +22,9 @@ async def async_setup_entry(
 
     from .const import PLATFORMS
     from .coordinator import FanManager
+
+    if entry.title != NAME:
+        hass.config_entries.async_update_entry(entry, title=NAME)
 
     manager = FanManager(hass)
     try:

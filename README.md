@@ -1,10 +1,10 @@
-# Atomberg Independent
+# Atomberg
 
 An independently implemented Home Assistant integration for local control of
 Atomberg smart fans. It does not use cloud accounts or copy another
 integration's source code.
 
-## Current release: 0.4.3
+## Current release: 0.4.4
 
 The integration listens for the documented local UDP packet formats:
 
@@ -49,7 +49,7 @@ newer. To test it:
    `config/custom_components/` directory.
 2. Restart Home Assistant.
 3. Go to **Settings → Devices & services → Add integration** and choose
-   **Atomberg Independent**.
+   **Atomberg**.
 4. Ensure Home Assistant and the provisioned fan are on a network that permits
    local UDP broadcast and traffic to the fan's UDP port `5600`.
 5. Disable any other integration listening on UDP port `5625` while testing;
@@ -79,7 +79,10 @@ versioning are documented in [docs/](docs/).
   another host spoofing packets on an untrusted local network.
 - No internet or cloud calls are made.
 - Device identifiers and local addresses are omitted from integration logs and
-  diagnostics.
+  diagnostics. Temporary protocol debug messages include only a shortened
+  one-way device hash, the reported series, and the status word; they omit raw
+  payloads and network addresses. See [troubleshooting](docs/troubleshooting.md)
+  for enabling and disabling these messages.
 - The integration has not been hardware-validated against the Aris Contour.
 - Do not publish raw packet captures, complete hardware identifiers, network
   addresses, credentials, or tokens.

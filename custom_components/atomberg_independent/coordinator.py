@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Callable, cast
 
@@ -53,6 +53,7 @@ class FanDevice:
     light_mode: str | None = None
     firmware: str | None = None
     available: bool = True
+    diagnostic_packet_types_seen: set[str] = field(default_factory=set)
 
 
 class _FanDatagramProtocol(asyncio.DatagramProtocol):
@@ -124,6 +125,7 @@ class FanManager:
             return
 
         key = stable_device_key(parsed.device_id)
+        packet_type = "full_state" if parsed.has_state else "presence"
         now = time.monotonic()
         device = self.devices.get(key)
         is_new = device is None
@@ -159,6 +161,19 @@ class FanManager:
         if parsed.series and parsed.series != device.series:
             device.series = parsed.series
             device.profile = resolve_model_profile(parsed.series)
+        if (
+            LOGGER.isEnabledFor(logging.DEBUG)
+            and packet_type not in device.diagnostic_packet_types_seen
+        ):
+            LOGGER.debug(
+                "Temporary Atomberg protocol diagnostic "
+                "(device_hash=%s, packet_type=%s, raw_series=%r, status_word=%s)",
+                device.device_key[:8].upper(),
+                packet_type,
+                parsed.raw_series,
+                parsed.status_word,
+            )
+            device.diagnostic_packet_types_seen.add(packet_type)
         for callback in tuple(self._listeners):
             callback(device)
         if is_new and not parsed.has_state:

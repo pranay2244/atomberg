@@ -27,6 +27,28 @@ Diagnostics include integration and Home Assistant versions, config-entry
 schema version, reported series, and online status. Raw device identifiers,
 network addresses, credentials, and raw protocol payloads are omitted.
 
+## Temporary protocol debug logging
+
+For short-term troubleshooting, the integration emits one debug message per
+device and packet type (presence and full-state). The message contains a
+shortened one-way device hash, the raw reported series, and the numeric status
+word when present. It does not include a MAC address, source IP, or raw packet
+payload.
+
+Temporarily enable the logger in Home Assistant's `configuration.yaml`:
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.atomberg_independent.coordinator: debug
+```
+
+Restart Home Assistant, reproduce the observation, then remove the
+integration-specific logger entry and restart again. Do not share full logs;
+retain only the relevant sanitized messages and redact the device hash if
+publishing them.
+
 ## Reporting an observation
 
 Do not attach unredacted packet captures or logs. Include the confirmed model

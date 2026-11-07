@@ -34,6 +34,8 @@ class DatagramParsingTests(unittest.TestCase):
         assert state is not None
         self.assertEqual(state.device_id, "aabbccddeeff")
         self.assertEqual(state.series, "I5")
+        self.assertEqual(state.raw_series, "I5")
+        self.assertIsNone(state.status_word)
         self.assertFalse(state.has_state)
         self.assertIsNone(state.power)
 
@@ -54,6 +56,8 @@ class DatagramParsingTests(unittest.TestCase):
         assert state is not None
         self.assertEqual(state.device_id, "aabbccddeeff")
         self.assertEqual(state.series, "I5")
+        self.assertEqual(state.raw_series, "I5")
+        self.assertEqual(state.status_word, status)
         self.assertTrue(state.has_state)
         self.assertTrue(state.power)
         self.assertEqual(state.speed, 4)

@@ -1,4 +1,4 @@
-"""Privacy-safe diagnostics for Atomberg Independent."""
+"""Privacy-safe diagnostics for Atomberg."""
 
 from __future__ import annotations
 

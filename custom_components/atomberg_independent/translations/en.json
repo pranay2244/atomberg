@@ -2,12 +2,12 @@
   "config": {
     "step": {
       "user": {
-        "title": "Atomberg Independent",
+        "title": "Atomberg",
         "description": "Add the integration to listen for local Atomberg fan state broadcasts. Devices are added when they announce themselves."
       }
     },
     "abort": {
-      "already_configured": "Atomberg Independent is already configured."
+      "already_configured": "Atomberg is already configured."
     }
   },
   "entity": {

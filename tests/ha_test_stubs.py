@@ -60,6 +60,12 @@ def ensure_homeassistant_modules() -> None:
 
     config_entries = ModuleType("homeassistant.config_entries")
     config_entries.ConfigEntry = type("ConfigEntry", (), {})
+    exceptions = ModuleType("homeassistant.exceptions")
+
+    class ConfigEntryNotReady(Exception):
+        pass
+
+    exceptions.ConfigEntryNotReady = ConfigEntryNotReady
 
     homeassistant.core = core
     homeassistant.helpers = helpers
@@ -70,6 +76,7 @@ def ensure_homeassistant_modules() -> None:
     helpers.entity_platform = entity_platform
     components.light = light
     homeassistant.config_entries = config_entries
+    homeassistant.exceptions = exceptions
 
     sys.modules.update(
         {
@@ -83,5 +90,6 @@ def ensure_homeassistant_modules() -> None:
             "homeassistant.components": components,
             "homeassistant.components.light": light,
             "homeassistant.config_entries": config_entries,
+            "homeassistant.exceptions": exceptions,
         }
     )

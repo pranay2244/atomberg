@@ -1,8 +1,8 @@
-"""Constants for the Atomberg Independent integration."""
+"""Constants for the Atomberg integration."""
 
 DOMAIN = "atomberg_independent"
-NAME = "Atomberg Independent"
-INTEGRATION_VERSION = "0.4.3"
+NAME = "Atomberg"
+INTEGRATION_VERSION = "0.4.4"
 INTEGRATION_STATUS = "local_wifi_unverified"
 
 PLATFORMS = ("fan", "light", "switch", "select", "sensor")
