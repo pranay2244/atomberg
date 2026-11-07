@@ -66,13 +66,17 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
 for _series_number in range(1, 6):
     _series = f"I{_series_number}"
     MODEL_PROFILES[_series] = ModelProfile(
-        _series, "Aris family (series hint)", frozenset(ARIS)
+        _series,
+        "Aris Contour family (series hint)"
+        if _series == "I5"
+        else "Aris family (series hint)",
+        frozenset(ARIS),
     )
 
 UNKNOWN_MODEL = ModelProfile(
     "unknown",
     "Unknown Atomberg series",
-    BASE_CAPABILITIES,
+    frozenset(),
 )
 
 

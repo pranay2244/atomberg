@@ -7,7 +7,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .coordinator import FanDevice, FanManager
 from .entity import AtombergEntity, setup_device_entities
 from .models import Capability
@@ -37,11 +36,11 @@ class AtombergSleepSwitch(AtombergEntity, SwitchEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ConfigEntry[FanManager],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sleep switches only for supported models."""
-    manager: FanManager = hass.data[DOMAIN][entry.entry_id]
+    manager = entry.runtime_data
 
     def create_entity(
         manager: FanManager, device: FanDevice

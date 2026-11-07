@@ -1,7 +1,8 @@
-"""Small, validated helpers for the locally observed JSON datagram protocol."""
+"""Validated parsing and command encoding for Atomberg local UDP packets."""
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
 from dataclasses import dataclass
@@ -9,154 +10,241 @@ from typing import Any
 
 from .const import MAX_DATAGRAM_SIZE
 
-
-_SERIES_PATTERN = re.compile(r"(?<![A-Z0-9])([IRSMK]\d+)(?![A-Z0-9])", re.IGNORECASE)
-_IDENTIFIER_KEYS = ("device_id", "deviceId", "deviceID")
-_SERIES_KEYS = ("series", "series_code", "seriesCode", "model_code", "modelCode")
-_NESTED_KEYS = ("device", "data", "state", "payload")
+_MAC_PATTERN = re.compile(
+    r"^(?:[0-9a-fA-F]{12}|(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}|"
+    r"(?:[0-9a-fA-F]{2}-){5}[0-9a-fA-F]{2})$"
+)
+_SERIES_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9-]{0,15}$")
+_TIMER_HOURS_TO_INDEX = {0: 0, 1: 1, 2: 2, 3: 3, 6: 4}
+_LIGHT_MODES = {"warm", "cool", "daylight"}
 
 
 @dataclass(frozen=True)
 class FanState:
-    """Validated state fields extracted from one fan datagram."""
+    """Parsed presence or full-state packet."""
 
     device_id: str
     series: str | None
+    has_state: bool
     power: bool | None = None
     speed: int | None = None
     sleep: bool | None = None
-    timer: int | None = None
+    timer_hours: int | None = None
     led: bool | None = None
     brightness: int | None = None
     light_mode: str | None = None
-    firmware: str | None = None
 
 
-def _find_value(objects: list[dict[str, Any]], keys: tuple[str, ...]) -> Any:
-    for obj in objects:
-        for key in keys:
-            if key in obj:
-                return obj[key]
-    return None
-
-
-def _as_bool(value: Any) -> bool | None:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, int) and value in (0, 1):
-        return bool(value)
-    if isinstance(value, str):
-        normalized = value.strip().casefold()
-        if normalized in ("true", "on", "1"):
-            return True
-        if normalized in ("false", "off", "0"):
-            return False
-    return None
-
-
-def _as_int(value: Any, minimum: int, maximum: int) -> int | None:
-    if isinstance(value, bool):
-        return None
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return None
-    return parsed if minimum <= parsed <= maximum else None
-
-
-def _as_timer(value: Any) -> int | None:
-    """Return only timer values supported by the Home Assistant control."""
-    parsed = _as_int(value, 0, 6)
-    return parsed if parsed in (0, 1, 2, 3, 6) else None
-
-
-def _clean_text(value: Any, maximum_length: int = 64) -> str | None:
+def _normalize_device_id(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
-    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+    normalized = value.strip()
+    if not _MAC_PATTERN.fullmatch(normalized):
         return None
-    result = value.strip()
-    if not result or len(result) > maximum_length:
+    device_id = re.sub(r"[:-]", "", normalized).lower()
+    if device_id == "000000000000" or int(device_id[:2], 16) & 1:
         return None
-    return result
+    return device_id
 
 
-def parse_datagram(payload: bytes) -> FanState | None:
-    """Parse a JSON discovery/state datagram; ignore unknown or malformed input."""
-    if not payload or len(payload) > MAX_DATAGRAM_SIZE:
+def _normalize_series(value: Any) -> str | None:
+    if not isinstance(value, str):
         return None
+    series = value.strip()
+    if not _SERIES_PATTERN.fullmatch(series):
+        return None
+    return series.upper()
+
+
+def _parse_integer(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and re.fullmatch(r"-?\d{1,8}", value.strip()):
+        return int(value.strip())
+    return None
+
+
+def is_valid_source_address(address: str) -> bool:
+    """Accept only private, unicast local-network source addresses."""
     try:
-        message = json.loads(payload)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return None
-    if not isinstance(message, dict):
-        return None
-
-    objects = [message]
-    for key in _NESTED_KEYS:
-        nested = message.get(key)
-        if isinstance(nested, dict):
-            objects.append(nested)
-
-    device_id = _clean_text(_find_value(objects, _IDENTIFIER_KEYS))
-    if device_id is None:
-        return None
-
-    series = _clean_text(_find_value(objects, _SERIES_KEYS), 32)
-    if series and not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", series):
-        series = None
-    if series is None:
-        advertised_name = _clean_text(
-            _find_value(objects, ("name", "local_name", "localName")), 128
-        )
-        if advertised_name:
-            match = _SERIES_PATTERN.search(advertised_name)
-            if match:
-                series = match.group(1).upper()
-    if series is not None:
-        series = series.upper()
-
-    return FanState(
-        device_id=device_id,
-        series=series,
-        power=_as_bool(_find_value(objects, ("power", "is_on", "isOn"))),
-        speed=_as_int(_find_value(objects, ("speed", "fan_speed", "fanSpeed")), 0, 6),
-        sleep=_as_bool(_find_value(objects, ("sleep", "sleep_mode", "sleepMode"))),
-        timer=_as_timer(_find_value(objects, ("timer", "timer_hours", "timerHours"))),
-        led=_as_bool(_find_value(objects, ("led", "light", "light_on", "lightOn"))),
-        brightness=_as_int(_find_value(objects, ("brightness", "light_brightness")), 0, 100),
-        light_mode=_clean_text(
-            _find_value(objects, ("light_mode", "lightMode", "color_mode", "colorMode")),
-            32,
-        ),
-        firmware=_clean_text(_find_value(objects, ("firmware", "firmware_version")), 64),
+        source = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    return (
+        source.is_private
+        and not source.is_multicast
+        and not source.is_unspecified
+        and not source.is_loopback
+        and not source.is_reserved
     )
 
 
+def _decode_state_string(state_string: Any) -> dict[str, Any] | None:
+    """Decode fields from the first status word of a CSV state string."""
+    if not isinstance(state_string, str):
+        return None
+    fields = state_string.split(",")
+    status = _parse_integer(fields[0].strip()) if fields else None
+    if status is None or status < 0 or status > 0xFFFFFF:
+        return None
+
+    speed = status & 0x07
+    brightness = (status & 0x7F00) >> 8
+    timer_hours = (status & 0x0F0000) >> 16
+    series_text = fields[7].strip() if len(fields) > 7 else None
+    series = _normalize_series(series_text) if series_text else None
+    if series_text and series is None:
+        return None
+    cool = bool(status & 0x08)
+    warm = bool(status & 0x8000)
+    light_mode = (
+        "daylight" if cool and warm else "cool" if cool else "warm" if warm else None
+    )
+    return {
+        "power": bool(status & 0x10),
+        "speed": speed if speed <= 6 else None,
+        "led": bool(status & 0x20),
+        "sleep": bool(status & 0x80),
+        "brightness": brightness if brightness <= 100 else None,
+        "timer_hours": timer_hours if timer_hours in _TIMER_HOURS_TO_INDEX else None,
+        "light_mode": light_mode,
+        "series": series,
+    }
+
+
+def parse_presence(payload: bytes) -> FanState | None:
+    """Parse the ASCII presence beacon ``<device_id>_<series>``."""
+    if not payload or len(payload) > 128:
+        return None
+    try:
+        message = payload.decode("ascii").strip()
+    except UnicodeDecodeError:
+        return None
+    device_id_text, separator, series_text = message.partition("_")
+    if not separator:
+        return None
+    device_id = _normalize_device_id(device_id_text)
+    series = _normalize_series(series_text)
+    if device_id is None or series is None:
+        return None
+    return FanState(device_id=device_id, series=series, has_state=False)
+
+
+def parse_full_state(payload: bytes) -> FanState | None:
+    """Parse a hex-encoded JSON envelope carrying ``device_id`` and ``state_string``."""
+    if not payload or len(payload) > MAX_DATAGRAM_SIZE:
+        return None
+    try:
+        encoded = payload.decode("ascii").strip()
+        decoded = bytes.fromhex(encoded)
+        envelope = json.loads(decoded)
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(envelope, dict):
+        return None
+
+    device_id = _normalize_device_id(envelope.get("device_id"))
+    if device_id is None:
+        return None
+    state = _decode_state_string(envelope.get("state_string"))
+    if state is None:
+        return None
+    return FanState(
+        device_id=device_id,
+        series=state["series"],
+        has_state=True,
+        power=state["power"],
+        speed=state["speed"],
+        sleep=state["sleep"],
+        timer_hours=state["timer_hours"],
+        led=state["led"],
+        brightness=state["brightness"],
+        light_mode=state["light_mode"],
+    )
+
+
+def parse_datagram(payload: bytes) -> FanState | None:
+    """Parse either a plain presence beacon or hex-encoded full-state packet."""
+    if not payload or len(payload) > MAX_DATAGRAM_SIZE:
+        return None
+    presence = parse_presence(payload)
+    if presence is not None:
+        return presence
+    return parse_full_state(payload)
+
+
 def encode_command(**fields: bool | int | str) -> bytes:
-    """Encode only the documented control fields with strict value validation."""
-    allowed = {"power", "speed", "boost", "led", "brightness", "sleep", "timer"}
+    """Encode the documented command fields after strict validation."""
+    allowed = {
+        "power",
+        "speed",
+        "boost",
+        "led",
+        "brightness",
+        "sleep",
+        "timer",
+        "light_mode",
+        "read",
+    }
     if not fields or set(fields) - allowed:
         raise ValueError("Unsupported or empty fan command")
+    if "read" in fields and len(fields) > 1:
+        raise ValueError("read must be sent as a separate command")
+    if "led" in fields and {"brightness", "light_mode"} & fields.keys():
+        raise ValueError("LED power and light attributes must be sent separately")
 
     for key, value in fields.items():
-        if key in {"power", "boost", "led", "sleep"} and not isinstance(value, bool):
-            raise ValueError(f"{key} must be a boolean")
-        if key == "speed" and (
+        if key in {"power", "boost", "led", "sleep", "read"}:
+            if key == "read":
+                if type(value) is not int or value != 1:
+                    raise ValueError("read must be 1")
+            elif not isinstance(value, bool):
+                raise ValueError(f"{key} must be a boolean")
+        elif key == "speed" and (
             isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 6
         ):
             raise ValueError("speed must be an integer from 1 to 6")
-        if key == "brightness" and (
-            isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100
-        ):
-            raise ValueError("brightness must be an integer from 0 to 100")
-        if key == "timer" and (
+        elif key == "brightness" and (
             isinstance(value, bool)
             or not isinstance(value, int)
-            or value not in (0, 1, 2, 3, 6)
+            or not 0 <= value <= 100
         ):
-            raise ValueError("timer must be one of 0, 1, 2, 3, or 6 hours")
+            raise ValueError("brightness must be an integer from 0 to 100")
+        elif key == "timer" and (
+            isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 4
+        ):
+            raise ValueError("timer command index must be from 0 to 4")
+        elif key == "light_mode" and (
+            not isinstance(value, str) or value not in _LIGHT_MODES
+        ):
+            raise ValueError("light_mode must be warm, cool, or daylight")
     return json.dumps(fields, separators=(",", ":"), sort_keys=True).encode()
+
+
+def timer_hours_to_command_index(hours: int) -> int:
+    """Convert the reported timer hours to the fan's command option index."""
+    if isinstance(hours, bool) or not isinstance(hours, int):
+        raise ValueError("Timer hours must be 0, 1, 2, 3, or 6")
+    try:
+        return _TIMER_HOURS_TO_INDEX[hours]
+    except KeyError as err:
+        raise ValueError("Timer hours must be 0, 1, 2, 3, or 6") from err
+
+
+def build_light_commands(
+    *, turn_on: bool = True, brightness: int | None = None, light_mode: str | None = None
+) -> tuple[bytes, ...]:
+    """Build separate LED and attribute commands; firmware ignores combined attributes."""
+    commands: list[bytes] = []
+    if brightness is not None:
+        commands.append(encode_command(brightness=brightness))
+    if light_mode is not None:
+        commands.append(encode_command(light_mode=light_mode))
+    if not commands:
+        commands.append(encode_command(led=turn_on))
+    return tuple(commands)
 
 
 def percentage_to_speed(percentage: int) -> int:

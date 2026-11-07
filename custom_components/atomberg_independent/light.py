@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Callable
-
 from homeassistant.components.light import ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .coordinator import FanDevice, FanManager
 from .entity import AtombergEntity, setup_device_entities
 from .models import Capability
+from .protocol import build_light_commands
 
 
 class AtombergLight(AtombergEntity, LightEntity):
@@ -27,10 +25,19 @@ class AtombergLight(AtombergEntity, LightEntity):
 
     @property
     def _supports_brightness(self) -> bool:
-        return (
-            Capability.LIGHT_BRIGHTNESS in self.device.profile.capabilities
-            and self.device.brightness is not None
-        )
+        return Capability.LIGHT_BRIGHTNESS in self.device.profile.capabilities
+
+    @property
+    def effect_list(self) -> list[str] | None:
+        """Return supported light modes when the series profile allows them."""
+        if Capability.LIGHT_COLOR_MODE not in self.device.profile.capabilities:
+            return None
+        return ["warm", "cool", "daylight"]
+
+    @property
+    def effect(self) -> str | None:
+        """Return the reported light mode."""
+        return self.device.light_mode
 
     @property
     def color_mode(self) -> ColorMode:
@@ -58,8 +65,8 @@ class AtombergLight(AtombergEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on the LED and optionally set its brightness."""
-        fields: dict[str, bool | int] = {"led": True}
         brightness = kwargs.get("brightness")
+        brightness_percent = None
         if brightness is not None:
             if not self._supports_brightness:
                 raise ValueError("Brightness is not supported by this fan")
@@ -67,8 +74,18 @@ class AtombergLight(AtombergEntity, LightEntity):
                 raise ValueError("Brightness must be an integer")
             if not 0 <= brightness <= 255:
                 raise ValueError("Brightness must be between 0 and 255")
-            fields["brightness"] = round(brightness * 100 / 255)
-        self.manager.send_command(self.device, **fields)
+            brightness_percent = round(brightness * 100 / 255)
+        effect = kwargs.get("effect")
+        if effect is not None and (
+            Capability.LIGHT_COLOR_MODE not in self.device.profile.capabilities
+        ):
+            raise ValueError("Light modes are not supported by this fan")
+        commands = build_light_commands(
+            turn_on=True,
+            brightness=brightness_percent,
+            light_mode=effect,
+        )
+        self.manager.send_commands(self.device, commands)
 
     async def async_turn_off(self, **_kwargs) -> None:
         """Turn off the LED."""
@@ -77,11 +94,11 @@ class AtombergLight(AtombergEntity, LightEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ConfigEntry[FanManager],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up light entities only for models with a light capability."""
-    manager: FanManager = hass.data[DOMAIN][entry.entry_id]
+    manager = entry.runtime_data
 
     def create_entity(
         manager: FanManager, device: FanDevice

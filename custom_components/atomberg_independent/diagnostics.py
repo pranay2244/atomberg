@@ -8,14 +8,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import __version__ as HOME_ASSISTANT_VERSION
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, INTEGRATION_STATUS, INTEGRATION_VERSION
+from .const import INTEGRATION_STATUS, INTEGRATION_VERSION
+from .coordinator import FanManager
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry[FanManager]
 ) -> dict[str, Any]:
     """Return readiness information without raw identifiers or network addresses."""
-    manager = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    manager = getattr(entry, "runtime_data", None)
     devices = manager.devices.values() if manager else ()
     return {
         "status": INTEGRATION_STATUS,

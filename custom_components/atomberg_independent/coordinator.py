@@ -15,12 +15,20 @@ from homeassistant.helpers.event import async_track_time_interval
 from .const import (
     COMMAND_PORT,
     DEVICE_TIMEOUT_SECONDS,
+    MAX_DATAGRAM_SIZE,
+    MAX_DEVICES,
     STATE_PORT,
+    STATE_REFRESH_SECONDS,
     UPDATE_INTERVAL_SECONDS,
 )
 from .identity import stable_device_key
 from .models import ModelProfile, resolve_model_profile
-from .protocol import FanState, encode_command, parse_datagram
+from .protocol import (
+    FanState,
+    encode_command,
+    is_valid_source_address,
+    parse_datagram,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +43,7 @@ class FanDevice:
     series: str | None
     profile: ModelProfile
     last_seen: float
+    last_read_at: float | None = None
     power: bool | None = None
     speed: int | None = None
     sleep: bool | None = None
@@ -107,6 +116,9 @@ class FanManager:
 
     def handle_datagram(self, payload: bytes, addr: tuple[str, int]) -> None:
         """Validate and apply a fan state datagram."""
+        if not is_valid_source_address(addr[0]):
+            return
+
         parsed = parse_datagram(payload)
         if parsed is None:
             return
@@ -114,7 +126,11 @@ class FanManager:
         key = stable_device_key(parsed.device_id)
         now = time.monotonic()
         device = self.devices.get(key)
+        is_new = device is None
         if device is None:
+            if len(self.devices) >= MAX_DEVICES:
+                LOGGER.warning("Ignoring Atomberg device discovery limit")
+                return
             profile = resolve_model_profile(parsed.series)
             device = FanDevice(
                 device_id=parsed.device_id,
@@ -133,7 +149,7 @@ class FanManager:
             device.host = addr[0]
             device.last_seen = now
             device.available = True
-            if parsed.series and not device.series:
+            if parsed.series and parsed.series != device.series:
                 device.series = parsed.series
                 device.profile = resolve_model_profile(parsed.series)
 
@@ -143,23 +159,44 @@ class FanManager:
             device.profile = resolve_model_profile(parsed.series)
         for callback in tuple(self._listeners):
             callback(device)
+        if is_new and not parsed.has_state:
+            self._request_state_refresh(device, now)
 
     @staticmethod
     def _apply_state(device: FanDevice, state: FanState) -> None:
         """Apply only fields explicitly present and valid in the datagram."""
-        for field in (
-            "power",
-            "speed",
-            "sleep",
-            "timer",
-            "led",
-            "brightness",
-            "light_mode",
-            "firmware",
+        if not state.has_state:
+            return
+        for state_field, device_field in (
+            ("power", "power"),
+            ("speed", "speed"),
+            ("sleep", "sleep"),
+            ("timer_hours", "timer"),
+            ("led", "led"),
+            ("brightness", "brightness"),
+            ("light_mode", "light_mode"),
         ):
-            value = getattr(state, field)
+            value = getattr(state, state_field)
             if value is not None:
-                setattr(device, field, value)
+                setattr(device, device_field, value)
+
+    def _request_state_refresh(self, device: FanDevice, now: float) -> None:
+        """Ask an announced fan for state without sending repeated read packets."""
+        if (
+            not device.available
+            or self.transport is None
+            or (
+                device.last_read_at is not None
+                and now - device.last_read_at < STATE_REFRESH_SECONDS
+            )
+        ):
+            return
+        try:
+            self.send_command(device, read=1)
+        except RuntimeError as err:
+            LOGGER.warning("Unable to request Atomberg fan state: %s", err)
+            return
+        device.last_read_at = now
 
     def _expire_stale_devices(self, _now: Any) -> None:
         """Mark devices offline after state broadcasts stop."""
@@ -170,13 +207,27 @@ class FanManager:
                 device.available = available
                 for callback in tuple(self._listeners):
                     callback(device)
+            if available:
+                self._request_state_refresh(device, current_time)
 
     def send_command(self, device: FanDevice, **fields: bool | int | str) -> None:
         """Send a validated command to a device heard on the local network."""
+        self._send_command_payload(device, encode_command(**fields))
+
+    def send_commands(
+        self, device: FanDevice, payloads: tuple[bytes, ...]
+    ) -> None:
+        """Send a group of already validated, separate protocol commands."""
+        for payload in payloads:
+            self._send_command_payload(device, payload)
+
+    def _send_command_payload(self, device: FanDevice, payload: bytes) -> None:
+        """Send one encoded command to a previously discovered fan."""
         if not device.available or not device.host:
             raise RuntimeError("The Atomberg fan is not available on the local network")
         if self.transport is None:
             raise RuntimeError("The Atomberg local UDP listener is not running")
-        payload = encode_command(**fields)
+        if not payload or len(payload) > MAX_DATAGRAM_SIZE:
+            raise ValueError("Invalid Atomberg command payload")
         self.transport.sendto(payload, (device.host, COMMAND_PORT))
         LOGGER.debug("Sent a local command to Atomberg device %s", device.device_key[:12])

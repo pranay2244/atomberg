@@ -7,10 +7,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .coordinator import FanDevice, FanManager
 from .entity import AtombergEntity, setup_device_entities
 from .models import Capability
+from .protocol import timer_hours_to_command_index
 
 TIMER_OPTIONS = ("Off", "1 hour", "2 hours", "3 hours", "6 hours")
 TIMER_VALUES = {"Off": 0, "1 hour": 1, "2 hours": 2, "3 hours": 3, "6 hours": 6}
@@ -43,16 +43,17 @@ class AtombergTimerSelect(AtombergEntity, SelectEntity):
         """Set a validated timer option."""
         if option not in TIMER_VALUES:
             raise ValueError("Unsupported timer option")
-        self.manager.send_command(self.device, timer=TIMER_VALUES[option])
+        timer_index = timer_hours_to_command_index(TIMER_VALUES[option])
+        self.manager.send_command(self.device, timer=timer_index)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ConfigEntry[FanManager],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up timer selects only for supported models."""
-    manager: FanManager = hass.data[DOMAIN][entry.entry_id]
+    manager = entry.runtime_data
 
     def create_entity(
         manager: FanManager, device: FanDevice

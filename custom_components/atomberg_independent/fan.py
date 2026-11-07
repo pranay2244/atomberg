@@ -7,21 +7,26 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .coordinator import FanDevice, FanManager
 from .entity import AtombergEntity, setup_device_entities
+from .models import Capability
 from .protocol import percentage_to_speed, speed_to_percentage
 
 
 class AtombergFan(AtombergEntity, FanEntity):
     """Discrete six-speed fan entity."""
 
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_ON
-        | FanEntityFeature.TURN_OFF
-    )
     _attr_speed_count = 6
+
+    @property
+    def supported_features(self) -> FanEntityFeature:
+        """Expose fan controls only when the series profile supports them."""
+        features = FanEntityFeature(0)
+        if Capability.FAN_SPEED in self.device.profile.capabilities:
+            features |= FanEntityFeature.SET_SPEED
+        if Capability.FAN_POWER in self.device.profile.capabilities:
+            features |= FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
+        return features
 
     @property
     def available(self) -> bool:
@@ -36,8 +41,10 @@ class AtombergFan(AtombergEntity, FanEntity):
     @property
     def percentage(self) -> int | None:
         """Return reported speed as a Home Assistant percentage."""
+        if self.device.power is False:
+            return 0
         if self.device.speed is None:
-            return 0 if self.device.power is False else None
+            return None
         return speed_to_percentage(self.device.speed)
 
     async def async_turn_on(
@@ -63,16 +70,18 @@ class AtombergFan(AtombergEntity, FanEntity):
             self.manager.send_command(self.device, power=False)
             return
         speed = percentage_to_speed(percentage)
-        self.manager.send_command(self.device, speed=speed, boost=False)
+        self.manager.send_command(
+            self.device, power=True, speed=speed, boost=False
+        )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ConfigEntry[FanManager],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up fan entities as fans are discovered."""
-    manager: FanManager = hass.data[DOMAIN][entry.entry_id]
+    manager = entry.runtime_data
 
     def create_entity(manager: FanManager, device: FanDevice) -> AtombergFan:
         return AtombergFan(manager, device, "fan", "Fan")

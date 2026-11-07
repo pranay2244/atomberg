@@ -8,7 +8,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .coordinator import FanDevice, FanManager
 from .entity import AtombergEntity
 
@@ -41,11 +40,11 @@ class AtombergSeriesSensor(AtombergEntity, SensorEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ConfigEntry[FanManager],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up diagnostic sensors for each discovered fan."""
-    manager: FanManager = hass.data[DOMAIN][entry.entry_id]
+    manager = entry.runtime_data
     entities: dict[str, list[AtombergEntity]] = {}
 
     def device_updated(device: FanDevice) -> None:

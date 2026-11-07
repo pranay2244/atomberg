@@ -23,6 +23,13 @@ class ModelRegistryTests(unittest.TestCase):
         self.assertEqual(profile.evidence_status, "unverified")
         self.assertIn(Capability.LIGHT_COLOR_MODE, profile.capabilities)
 
+    def test_i5_is_an_aris_contour_series_hint_not_efficio(self) -> None:
+        profile = resolve_model_profile("I5")
+
+        self.assertEqual(profile.name, "Aris Contour family (series hint)")
+        self.assertNotIn("Efficio", profile.name)
+        self.assertEqual(profile.evidence_status, "unverified")
+
     def test_efficio_series_name_is_explicitly_a_hint(self) -> None:
         profile = resolve_model_profile("M1")
 
@@ -39,6 +46,9 @@ class ModelRegistryTests(unittest.TestCase):
 
     def test_series_lookup_is_case_insensitive(self) -> None:
         self.assertIs(resolve_model_profile("r1"), resolve_model_profile("R1"))
+
+    def test_unknown_series_does_not_expose_unverified_controls(self) -> None:
+        self.assertEqual(resolve_model_profile(None).capabilities, frozenset())
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+    from .coordinator import FanManager
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,11 +18,13 @@ async def async_setup(_hass: HomeAssistant, _config: dict) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry[FanManager]
+) -> bool:
     """Start local UDP state reception and forward supported platforms."""
     from homeassistant.exceptions import ConfigEntryNotReady
 
-    from .const import DOMAIN, PLATFORMS
+    from .const import PLATFORMS
     from .coordinator import FanManager
 
     manager = FanManager(hass)
@@ -31,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         LOGGER.exception("Unable to start the Atomberg local UDP listener")
         raise ConfigEntryNotReady("Unable to listen for local fan state") from err
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
+    entry.runtime_data = manager
     platforms_loaded = False
     try:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -39,18 +42,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     finally:
         if not platforms_loaded:
             await manager.async_stop()
-            hass.data[DOMAIN].pop(entry.entry_id, None)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: ConfigEntry[FanManager]
+) -> bool:
     """Stop the listener after Home Assistant unloads the platforms."""
-    from .const import DOMAIN, PLATFORMS
+    from .const import PLATFORMS
 
     if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
-    manager = hass.data[DOMAIN].pop(entry.entry_id)
-    await manager.async_stop()
-    if not hass.data[DOMAIN]:
-        hass.data.pop(DOMAIN)
+    await entry.runtime_data.async_stop()
     return True

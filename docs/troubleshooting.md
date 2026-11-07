@@ -2,10 +2,10 @@
 
 ## No fan entities appear
 
-The integration listens for JSON UDP state datagrams on port `5625`. Check that
-Home Assistant and the provisioned fan are on the same reachable network and
-that local UDP broadcasts are permitted. The integration does not scan other
-addresses or send a discovery request.
+The integration listens for presence beacons and hex-encoded JSON state
+datagrams on UDP port `5625`. Check that Home Assistant and the provisioned fan
+are on the same reachable network and that local UDP broadcasts are permitted.
+The integration does not scan other addresses.
 
 ## The fan appears but controls do not take effect
 
