@@ -23,7 +23,7 @@ class VersionMetadataTests(unittest.TestCase):
         hacs = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "Atomberg")
         self.assertEqual(hacs["name"], manifest["name"])
-        self.assertEqual(INTEGRATION_VERSION, "0.4.6")
+        self.assertEqual(INTEGRATION_VERSION, "0.4.7")
 
     def test_brand_icon_sizes_are_square_and_match_home_assistant_assets(self) -> None:
         brand_dir = (

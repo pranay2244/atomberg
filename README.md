@@ -4,7 +4,7 @@ An independently implemented Home Assistant integration for local control of
 Atomberg smart fans. It does not use cloud accounts or copy another
 integration's source code.
 
-## Current release: 0.4.6
+## Current release: 0.4.7 (pre-release)
 
 The integration listens for the documented local UDP packet formats:
 
@@ -29,21 +29,34 @@ The integration listens for the documented local UDP packet formats:
   treated as proof of the retail model.
 
 Bluetooth transport and unknown packet encodings are not implemented. The
-Aris Contour association for series `I5` is a family hint, not verified retail
-model identification. No physical fan packet capture has yet been validated
-by this project. The integration does not receive command acknowledgments;
-reported state is updated from subsequent fan broadcasts, not optimistically
-from a successful UDP send.
+presence and full-state packet formats have been observed in sanitized captures
+from five physical fans; all five reported `M1` in both packet types. This
+confirms those observed packet envelopes and series fields, not the fans'
+retail models or every decoded state bit. The Aris Contour association for
+series `I5` remains a family hint, not verified retail model identification.
+The integration does not receive command acknowledgments; reported state is
+updated from subsequent fan broadcasts, not optimistically from a successful
+UDP send.
 
 ## Aris Contour model identification
 
 The public reference lists `I5` in the Aris Contour family and `M1` in an
 Efficio family. This integration uses `I5` as an Aris Contour family hint and
-does not identify the device as Efficio unless its reported series is `M1`.
-The series sensor preserves the reported code; retail model identity remains
-unverified without evidence from the physical fan.
+`M1` as an Efficio family hint only. The series sensor preserves the reported
+code; series alone does not establish a fan's retail model.
 
 ## Installation
+
+The HACS default-store submission is pending review. Until it is accepted, add
+the repository as a custom repository in HACS:
+
+1. Open **HACS → Integrations → ⋮ → Custom repositories**.
+2. Add `https://github.com/pranay2244/atomberg` with category **Integration**.
+3. Find **Atomberg** in HACS, download it, and restart Home Assistant.
+4. Go to **Settings → Devices & services → Add integration** and choose
+   **Atomberg**.
+
+Alternatively, install it manually:
 
 This is an early-development custom integration for Home Assistant 2024.8 or
 newer. To test it:
@@ -85,6 +98,7 @@ versioning are documented in [docs/](docs/).
   diagnostics. Logs use shortened one-way device hashes and never include raw
   packet payloads or network addresses. See
   [troubleshooting](docs/troubleshooting.md) for lifecycle and protocol logging.
-- The integration has not been hardware-validated against the Aris Contour.
+- The Aris Contour retail-model mapping and the three-stage light behavior
+  have not been verified from physical state transitions.
 - Do not publish raw packet captures, complete hardware identifiers, network
   addresses, credentials, or tokens.

@@ -22,8 +22,7 @@ description of local fan UDP control:
   LED bit `5`, sleep bit `7`, brightness bits `8-14`, warm mode bit `15`, and
   timer bits `16-19`. Series is read from the eighth CSV field.
 - If neither light-mode bit is set, the mode remains unknown. Whether this
-  represents the fan's default warm mode is unverified and needs a real
-  Aris Contour state capture.
+  represents the fan's default warm mode remains unverified.
 - The reported timer hours (`0`, `1`, `2`, `3`, `6`) map to wire command
   indices (`0`, `1`, `2`, `3`, `4`); six hours must not be sent as `timer: 6`.
 - Light attribute commands (`brightness` and `light mode`) are sent separately
@@ -34,7 +33,11 @@ description of local fan UDP control:
 The series/model table and command field names are informed by the public
 integration README and the user's protocol review. No source code from the
 referenced integration is used. Parser tests create synthetic examples in the
-documented wire format; they are not genuine device captures. Other packet
+documented wire format; they are not genuine device captures. Separate
+sanitized presence and full-state captures from five physical fans have now
+been observed; all five reported series `M1` in both packet types. The captures
+support the packet-envelope and series-field handling but do not validate every
+status-bit interpretation or identify the fans' retail models. Other packet
 encodings are ignored.
 
 Behavioral references:
@@ -57,16 +60,18 @@ implementation.
 - UDP send success is not treated as device acknowledgment. State changes are
   reflected only after a later valid state datagram.
 - Bluetooth and colour-temperature control remain unimplemented.
-- No packet format or model mapping is hardware-verified by this project yet.
+- Packet envelopes and series extraction have been observed against physical
+  captures; the status-bit interpretations and model mapping remain only
+  partially verified.
 - Source-address checks and MAC validation reduce accidental input but do not
   authenticate packets; another host on the LAN can spoof this UDP protocol.
 
 ## Evidence record
 
-The implementation has not been tested with a physical fan. In particular,
-the status bit mapping and `I5` Aris Contour family hint are provisional and
-must be validated against sanitized captures from each supported model before
-making hardware compatibility claims.
+The implementation has not yet been validated across all supported models.
+In particular, the status-bit mapping, light brightness values, and `I5` Aris
+Contour family hint need controlled, sanitized state captures before making
+broader hardware-compatibility claims.
 
 For new observations, record the confirmed device-label model, the exact
 advertised series, firmware if available, one controlled action, the sanitized

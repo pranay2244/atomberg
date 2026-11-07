@@ -73,38 +73,6 @@ class FanManagerTests(unittest.TestCase):
         self.assertEqual(device.brightness, 70)
         self.assertEqual(device.timer, 6)
 
-    def test_temporary_protocol_diagnostics_are_sanitized_and_rate_limited(self) -> None:
-        with self.assertLogs(
-            "custom_components.atomberg_independent.coordinator", level="DEBUG"
-        ) as captured:
-            self.manager.handle_datagram(
-                presence(1, "m1"), ("192.168.1.10", 5625)
-            )
-            self.manager.handle_datagram(
-                presence(1, "m1"), ("192.168.1.10", 5625)
-            )
-            self.manager.handle_datagram(
-                state_packet(0x10, series="M1"), ("192.168.1.10", 5625)
-            )
-            self.manager.handle_datagram(
-                state_packet(0x10, series="M1"), ("192.168.1.10", 5625)
-            )
-
-        diagnostic_messages = [
-            message
-            for message in captured.output
-            if "Temporary Atomberg protocol diagnostic" in message
-        ]
-        self.assertEqual(len(diagnostic_messages), 2)
-        self.assertIn("packet_type=presence", diagnostic_messages[0])
-        self.assertIn("raw_series='m1'", diagnostic_messages[0])
-        self.assertIn("packet_type=full_state", diagnostic_messages[1])
-        self.assertIn("status_word=16", diagnostic_messages[1])
-        for message in diagnostic_messages:
-            self.assertNotIn("02:00:00:00:00:01", message)
-            self.assertNotIn("192.168.1.10", message)
-            self.assertNotIn("state_string", message)
-
     def test_invalid_source_is_ignored(self) -> None:
         self.manager.handle_datagram(presence(1), ("8.8.8.8", 5625))
 

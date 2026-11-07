@@ -33,13 +33,9 @@ At INFO level, the integration logs setup, listener readiness, setup completion,
 Home Assistant shutdown, config-entry unload, listener stop, newly discovered
 devices, and device timeouts. Device messages use a shortened one-way hash
 rather than a MAC address. At DEBUG level, it logs an unrecognized packet's
-size, outgoing command hashes, and one temporary protocol diagnostic per
-device and packet type (presence and full-state). Protocol diagnostics include
-the reported series and numeric status word when present, but not a source IP
-or raw packet payload.
+size and outgoing command hashes. Protocol packet contents are not logged.
 
-For lifecycle logs, enable the integration logger in Home Assistant's
-`configuration.yaml`. Add the coordinator logger for protocol diagnostics:
+Enable the integration logger in Home Assistant's `configuration.yaml`:
 
 ```yaml
 logger:
@@ -50,10 +46,10 @@ logger:
 ```
 
 Restart Home Assistant, reproduce the observation, then remove the
-integration-specific logger entries and restart again. DEBUG-level unknown
-packet messages are emitted per packet, so disable coordinator DEBUG when it is
-not needed. Do not share full logs; retain only relevant sanitized messages and
-redact device hashes before publishing them.
+integration-specific logger entries and restart again. DEBUG-level
+unrecognized-packet messages are emitted per packet, so disable coordinator
+DEBUG when it is not needed. Do not share full logs; retain only relevant
+sanitized messages and redact device hashes before publishing them.
 
 ## Reporting an observation
 
