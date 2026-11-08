@@ -79,6 +79,19 @@ def ensure_homeassistant_modules() -> None:
     light.LightEntity = LightEntity
     light.LightEntityFeature = LightEntityFeature
 
+    fan = ModuleType("homeassistant.components.fan")
+
+    class FanEntityFeature(IntFlag):
+        SET_SPEED = 1
+        TURN_ON = 2
+        TURN_OFF = 4
+
+    class FanEntity(Entity):
+        pass
+
+    fan.FanEntity = FanEntity
+    fan.FanEntityFeature = FanEntityFeature
+
     config_entries = ModuleType("homeassistant.config_entries")
     config_entries.ConfigEntry = type("ConfigEntry", (), {})
     const = ModuleType("homeassistant.const")
@@ -98,6 +111,7 @@ def ensure_homeassistant_modules() -> None:
     helpers.entity = entity
     helpers.entity_platform = entity_platform
     components.light = light
+    components.fan = fan
     components.number = number
     homeassistant.config_entries = config_entries
     homeassistant.const = const
@@ -114,6 +128,7 @@ def ensure_homeassistant_modules() -> None:
             "homeassistant.helpers.entity_platform": entity_platform,
             "homeassistant.components": components,
             "homeassistant.components.light": light,
+            "homeassistant.components.fan": fan,
             "homeassistant.components.number": number,
             "homeassistant.config_entries": config_entries,
             "homeassistant.const": const,

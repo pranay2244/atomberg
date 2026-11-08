@@ -147,16 +147,29 @@ class CommandEncodingTests(unittest.TestCase):
                 encode_command(**invalid)
 
     def test_maps_six_discrete_speed_levels(self) -> None:
+        speeds = range(1, 7)
+        percentages = (16, 33, 50, 66, 83, 100)
         self.assertEqual(
-            [percentage_to_speed(p) for p in (1, 17, 34, 50, 67, 84, 100)],
-            [1, 1, 2, 3, 4, 5, 6],
+            [speed_to_percentage(speed) for speed in speeds],
+            list(percentages),
         )
         self.assertEqual(
-            [speed_to_percentage(speed) for speed in range(1, 7)],
-            [17, 33, 50, 67, 83, 100],
+            [percentage_to_speed(percentage) for percentage in percentages],
+            list(speeds),
         )
-        with self.assertRaises(ValueError):
-            percentage_to_speed(0)
+        self.assertEqual(
+            [
+                percentage_to_speed(value)
+                for value in (1, 16, 24, 25, 41, 42, 58, 59, 74, 75, 91, 92, 100)
+            ],
+            [1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6],
+        )
+        for invalid in (0, 101, True, 50.0):
+            with self.subTest(percentage=invalid), self.assertRaises(ValueError):
+                percentage_to_speed(invalid)
+        for invalid in (0, 7, True, 3.0, "3"):
+            with self.subTest(speed=invalid):
+                self.assertIsNone(speed_to_percentage(invalid))
 
     def test_home_assistant_brightness_keeps_positive_requests_nonzero(self) -> None:
         self.assertEqual(

@@ -74,6 +74,72 @@ class AtombergFan(AtombergEntity, FanEntity):
             self.device, power=True, speed=speed, boost=False
         )
 
+    async def async_increase_speed(
+        self, percentage_step: int | None = None
+    ) -> None:
+        """Increase the reported fan speed by one or more physical levels."""
+        steps = self._percentage_step_to_speeds(percentage_step)
+        if steps == 0:
+            return
+        if self.device.power is False:
+            self.manager.send_command(
+                self.device, power=True, speed=1, boost=False
+            )
+            return
+        current_speed = self.device.speed
+        if (
+            self.device.power is not True
+            or isinstance(current_speed, bool)
+            or not isinstance(current_speed, int)
+            or not 1 <= current_speed <= 6
+        ):
+            return
+
+        speed = min(6, current_speed + steps)
+        if speed != current_speed:
+            self.manager.send_command(
+                self.device, power=True, speed=speed, boost=False
+            )
+
+    async def async_decrease_speed(
+        self, percentage_step: int | None = None
+    ) -> None:
+        """Decrease the reported fan speed by one or more physical levels."""
+        steps = self._percentage_step_to_speeds(percentage_step)
+        if steps == 0:
+            return
+        current_speed = self.device.speed
+        if (
+            self.device.power is not True
+            or isinstance(current_speed, bool)
+            or not isinstance(current_speed, int)
+            or not 1 <= current_speed <= 6
+        ):
+            return
+
+        speed = current_speed - steps
+        if speed <= 0:
+            self.manager.send_command(self.device, power=False)
+        else:
+            self.manager.send_command(
+                self.device, power=True, speed=speed, boost=False
+            )
+
+    @staticmethod
+    def _percentage_step_to_speeds(percentage_step: int | None) -> int:
+        """Translate a percentage step to the nearest number of fan levels."""
+        if percentage_step is None:
+            return 1
+        if (
+            isinstance(percentage_step, bool)
+            or not isinstance(percentage_step, int)
+            or percentage_step < 0
+        ):
+            raise ValueError("percentage_step must be a non-negative integer")
+        if percentage_step == 0:
+            return 0
+        return max(1, (percentage_step * 6 + 50) // 100)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

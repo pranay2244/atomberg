@@ -289,4 +289,4 @@ def speed_to_percentage(speed: int) -> int | None:
     """Map a reported discrete speed to Home Assistant percentage."""
     if isinstance(speed, bool) or not isinstance(speed, int) or not 1 <= speed <= 6:
         return None
-    return round(speed * 100 / 6)
+    return (speed * 100) // 6

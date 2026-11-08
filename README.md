@@ -96,6 +96,27 @@ The integration listens for fan datagrams; it does not scan arbitrary network
 addresses or send commands before a fan has announced itself. A Bluetooth
 adapter is not used by this release.
 
+## Apple Home through HomeKit Bridge
+
+Atomberg exposes a standard Home Assistant fan entity with power and six
+discrete speed levels. To control fans from Apple Home, use Home Assistant's
+official HomeKit Bridge:
+
+1. In Home Assistant, open **Settings → Devices & services → Add integration**
+   and add **HomeKit Bridge**.
+2. Configure the bridge to include only the Atomberg `fan` entities. Do not
+   expose diagnostic sensors, timer selects, or companion number entities for
+   this fan-control setup. Use one bridge.
+3. Complete bridge setup and scan the QR code shown by Home Assistant in
+   Apple's Home app using **Add Accessory**.
+
+The bridge exposes the fan's native on/off and rotation-speed controls. Speed
+and power state in Home Assistant and Apple Home follow subsequent fan
+broadcasts; the integration does not optimistically change reported state.
+Home Assistant's `fan.increase_speed` and `fan.decrease_speed` actions step
+through physical speeds. Apple Home exposes a rotation-speed slider rather
+than separate step-up/step-down controls.
+
 ## Development
 
 Run the hardware-independent tests with Python:
