@@ -282,7 +282,13 @@ def percentage_to_speed(percentage: int) -> int:
         raise ValueError("percentage must be an integer")
     if not 1 <= percentage <= 100:
         raise ValueError("percentage must be from 1 to 100")
-    return max(1, min(6, (percentage * 6 + 50) // 100))
+    return min(
+        range(1, 7),
+        key=lambda speed: (
+            abs(speed_to_percentage(speed) - percentage),
+            -speed,
+        ),
+    )
 
 
 def speed_to_percentage(speed: int) -> int | None:

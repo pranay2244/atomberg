@@ -177,21 +177,65 @@ class FanStepTests(unittest.TestCase):
 
         self.assertEqual(manager.payloads, [])
 
-    def test_percentage_steps_translate_to_multiple_hardware_levels(self) -> None:
-        fan, manager = make_fan(power=True, speed=2)
-        asyncio.run(fan.async_increase_speed(percentage_step=50))
+    def test_explicit_percentage_steps_apply_to_the_reported_percentage(self) -> None:
+        fan, manager = make_fan(power=True, speed=1)
+        asyncio.run(fan.async_increase_speed(percentage_step=1))
+        self.assertEqual(manager.payloads, [])
+
+        fan.device.speed = 2
+        asyncio.run(fan.async_increase_speed(percentage_step=25))
         self.assertEqual(
             sent_commands(manager),
-            [{"boost": False, "power": True, "speed": 5}],
+            [{"boost": False, "power": True, "speed": 4}],
         )
 
         manager.payloads.clear()
-        fan.device.speed = 2
-        asyncio.run(fan.async_decrease_speed(percentage_step=50))
-        self.assertEqual(sent_commands(manager), [{"power": False}])
+        fan.device.power = False
+        asyncio.run(fan.async_increase_speed(percentage_step=50))
+        self.assertEqual(
+            sent_commands(manager),
+            [{"boost": False, "power": True, "speed": 3}],
+        )
 
         manager.payloads.clear()
-        asyncio.run(fan.async_increase_speed(percentage_step=0))
+        asyncio.run(fan.async_increase_speed(percentage_step=1))
+        self.assertEqual(
+            sent_commands(manager),
+            [{"boost": False, "power": True, "speed": 1}],
+        )
+
+        manager.payloads.clear()
+        fan.device.power = True
+        fan.device.speed = 1
+        asyncio.run(fan.async_decrease_speed(percentage_step=1))
+        self.assertEqual(manager.payloads, [])
+
+        asyncio.run(fan.async_decrease_speed(percentage_step=100))
+        self.assertEqual(sent_commands(manager), [{"power": False}])
+
+    def test_explicit_percentage_steps_clamp_and_validate(self) -> None:
+        fan, manager = make_fan(power=True, speed=6)
+        asyncio.run(fan.async_increase_speed(percentage_step=100))
+        self.assertEqual(manager.payloads, [])
+
+        fan.device.speed = 1
+        asyncio.run(fan.async_increase_speed(percentage_step=101))
+        self.assertEqual(
+            sent_commands(manager),
+            [{"boost": False, "power": True, "speed": 6}],
+        )
+
+        manager.payloads.clear()
+        fan.device.speed = None
+        asyncio.run(fan.async_increase_speed(percentage_step=25))
+        self.assertEqual(manager.payloads, [])
+
+        for operation in (fan.async_increase_speed, fan.async_decrease_speed):
+            for step in (-1, True, 1.5):
+                with self.subTest(operation=operation.__name__, step=step):
+                    with self.assertRaises(ValueError):
+                        asyncio.run(operation(percentage_step=step))
+
         self.assertEqual(manager.payloads, [])
 
 

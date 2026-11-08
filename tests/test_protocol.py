@@ -162,7 +162,7 @@ class CommandEncodingTests(unittest.TestCase):
                 percentage_to_speed(value)
                 for value in (1, 16, 24, 25, 41, 42, 58, 59, 74, 75, 91, 92, 100)
             ],
-            [1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6],
+            [1, 1, 1, 2, 2, 3, 4, 4, 4, 5, 5, 6, 6],
         )
         for invalid in (0, 101, True, 50.0):
             with self.subTest(percentage=invalid), self.assertRaises(ValueError):

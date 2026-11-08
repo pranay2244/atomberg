@@ -54,11 +54,7 @@ class AtombergFan(AtombergEntity, FanEntity):
         if percentage is None:
             self.manager.send_command(self.device, power=True)
             return
-        if percentage == 0:
-            self.manager.send_command(self.device, power=False)
-            return
-        speed = percentage_to_speed(percentage)
-        self.manager.send_command(self.device, power=True, speed=speed, boost=False)
+        self._send_percentage_command(percentage)
 
     async def async_turn_off(self, **_kwargs) -> None:
         """Turn off the fan."""
@@ -66,6 +62,10 @@ class AtombergFan(AtombergEntity, FanEntity):
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set a discrete speed level."""
+        self._send_percentage_command(percentage)
+
+    def _send_percentage_command(self, percentage: int) -> None:
+        """Send a target percentage as a fan power or speed command."""
         if percentage == 0:
             self.manager.send_command(self.device, power=False)
             return
@@ -78,9 +78,23 @@ class AtombergFan(AtombergEntity, FanEntity):
         self, percentage_step: int | None = None
     ) -> None:
         """Increase the reported fan speed by one or more physical levels."""
-        steps = self._percentage_step_to_speeds(percentage_step)
-        if steps == 0:
+        if percentage_step is not None:
+            step = self._validate_percentage_step(percentage_step)
+            if step == 0:
+                return
+            if self.device.power is False:
+                current_percentage = 0
+            elif self.device.power is True:
+                current_percentage = self.percentage
+                if current_percentage is None:
+                    return
+            else:
+                return
+            self._send_percentage_step_target(
+                min(100, current_percentage + step)
+            )
             return
+
         if self.device.power is False:
             self.manager.send_command(
                 self.device, power=True, speed=1, boost=False
@@ -95,7 +109,7 @@ class AtombergFan(AtombergEntity, FanEntity):
         ):
             return
 
-        speed = min(6, current_speed + steps)
+        speed = min(6, current_speed + 1)
         if speed != current_speed:
             self.manager.send_command(
                 self.device, power=True, speed=speed, boost=False
@@ -105,9 +119,18 @@ class AtombergFan(AtombergEntity, FanEntity):
         self, percentage_step: int | None = None
     ) -> None:
         """Decrease the reported fan speed by one or more physical levels."""
-        steps = self._percentage_step_to_speeds(percentage_step)
-        if steps == 0:
+        if percentage_step is not None:
+            step = self._validate_percentage_step(percentage_step)
+            if step == 0 or self.device.power is not True:
+                return
+            current_percentage = self.percentage
+            if current_percentage is None:
+                return
+            self._send_percentage_step_target(
+                max(0, current_percentage - step)
+            )
             return
+
         current_speed = self.device.speed
         if (
             self.device.power is not True
@@ -117,7 +140,7 @@ class AtombergFan(AtombergEntity, FanEntity):
         ):
             return
 
-        speed = current_speed - steps
+        speed = current_speed - 1
         if speed <= 0:
             self.manager.send_command(self.device, power=False)
         else:
@@ -126,19 +149,29 @@ class AtombergFan(AtombergEntity, FanEntity):
             )
 
     @staticmethod
-    def _percentage_step_to_speeds(percentage_step: int | None) -> int:
-        """Translate a percentage step to the nearest number of fan levels."""
-        if percentage_step is None:
-            return 1
+    def _validate_percentage_step(percentage_step: int) -> int:
+        """Validate a percentage-point change requested by Home Assistant."""
         if (
             isinstance(percentage_step, bool)
             or not isinstance(percentage_step, int)
             or percentage_step < 0
         ):
             raise ValueError("percentage_step must be a non-negative integer")
-        if percentage_step == 0:
-            return 0
-        return max(1, (percentage_step * 6 + 50) // 100)
+        return percentage_step
+
+    def _send_percentage_step_target(self, percentage: int) -> None:
+        """Avoid sending a command if rounding leaves the fan at its current speed."""
+        target_speed = percentage_to_speed(percentage) if percentage > 0 else None
+        current_speed = self.device.speed
+        if (
+            target_speed is not None
+            and self.device.power is True
+            and isinstance(current_speed, int)
+            and not isinstance(current_speed, bool)
+            and current_speed == target_speed
+        ):
+            return
+        self._send_percentage_command(percentage)
 
 
 async def async_setup_entry(
