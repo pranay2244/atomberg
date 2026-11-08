@@ -123,6 +123,23 @@ class FanCommandTests(unittest.TestCase):
             ],
         )
 
+    def test_turn_on_accepts_home_assistant_service_arguments(self) -> None:
+        fan, manager = make_fan(power=False, speed=None)
+
+        asyncio.run(fan.async_turn_on(None, None))
+
+        self.assertEqual(sent_commands(manager), [{"power": True}])
+
+    def test_turn_on_with_percentage_and_preset_argument(self) -> None:
+        fan, manager = make_fan(power=False, speed=None)
+
+        asyncio.run(fan.async_turn_on(66, None))
+
+        self.assertEqual(
+            sent_commands(manager),
+            [{"boost": False, "power": True, "speed": 4}],
+        )
+
 
 class FanStepTests(unittest.TestCase):
     def test_increase_and_decrease_walk_each_physical_level(self) -> None:

@@ -48,7 +48,10 @@ class AtombergFan(AtombergEntity, FanEntity):
         return speed_to_percentage(self.device.speed)
 
     async def async_turn_on(
-        self, percentage: int | None = None, **_kwargs
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **_kwargs,
     ) -> None:
         """Turn on, optionally selecting a speed."""
         if percentage is None:
