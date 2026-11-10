@@ -25,7 +25,7 @@ The integration has two independent version numbers:
 4. Before claiming support for a hardware-dependent feature, validate its
    protocol mapping against controlled physical-device observations. Keep
    unverified controls hidden by default and document the limitation.
-5. Create a Git tag named `v<manifest-version>` (for example, `v0.4.8`) and a
+5. Create a Git tag named `v<manifest-version>` (for example, `v1.0.0`) and a
    stable GitHub release for that tag. Do not mark normal releases as
    pre-releases. HACS can then offer the tagged release.
 6. In Home Assistant, update the custom integration through HACS and restart

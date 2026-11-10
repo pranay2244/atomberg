@@ -4,10 +4,9 @@ An independently implemented Home Assistant integration for local control of
 Atomberg smart fans. It does not use cloud accounts or copy another
 integration's source code.
 
-## Unreleased version: 0.4.8
+## Version 1.0.0
 
-This version is under development and has not been published as a stable
-release.
+This is the current stable release.
 
 The integration listens for the documented local UDP packet formats:
 
